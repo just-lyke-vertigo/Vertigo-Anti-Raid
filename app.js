@@ -34,7 +34,12 @@ async function api(path, opts={}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers||{}) };
   const t = token.get();
   if (t) headers["Authorization"] = `Bearer ${t}`;
-  const res = await fetch(API + path, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  let res;
+  try {
+    res = await fetch(API + path, { ...opts, headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  } catch (netErr) {
+    throw new Error(`Can't reach backend at ${API_BASE}. Check your internet, or that the PythonAnywhere web app is reloaded with the latest code.`);
+  }
   if (res.status === 401 && !["/auth/login","/auth/signup"].includes(path)) {
     token.clear();
     if (!location.hash.startsWith("#/login") && location.hash !== "#/" && location.hash !== "") {
@@ -55,14 +60,11 @@ function toast(msg, kind="info") {
   setTimeout(() => t.remove(), 3500);
 }
 
-/* -------- Scroll reveal observer -------- */
+/* -------- Scroll reveal observer (bidirectional - resets when out of view) -------- */
 const revealObserver = new IntersectionObserver((entries) => {
-  entries.forEach((e, i) => {
-    if (e.isIntersecting) {
-      e.target.style.transitionDelay = `${Math.min(i,4) * 80}ms`;
-      e.target.classList.add("in");
-      revealObserver.unobserve(e.target);
-    }
+  entries.forEach((e) => {
+    if (e.isIntersecting) e.target.classList.add("in");
+    else e.target.classList.remove("in");
   });
 }, { threshold: 0.12 });
 
@@ -228,9 +230,9 @@ async function renderDashboard(page) {
       h("div", { class:"upgrade-desc" }, "Unlimited backups, priority defense.")
     ));
   }
-  const av = state.user?.avatar
+  const av = state.user?.discord_linked && state.user?.avatar
     ? h("span", { class:"user-av" }, h("img", { src: state.user.avatar, alt:"" }))
-    : h("span", { class:"user-av" }, (state.user?.username?.[0] || "?").toUpperCase());
+    : h("span", { class:"user-av" }, "?");
   foot.appendChild(h("div", { class:"user-row" }, av,
     h("div", { class:"user-meta" },
       h("div", { class:"user-name" }, state.user?.username || "", state.user?.premium_tier ? h("span", { html: ICON.crown, style:"color:#F59E0B" }) : ""),
@@ -747,20 +749,33 @@ function renderSettings(root) {
     h("h1", { class:"page-title" }, "Settings"),
     h("p", { class:"page-sub" }, "Manage your profile and subscription.")
   )));
-  const av = u?.avatar ? h("div", { class:"user-av", style:"width:56px;height:56px;font-size:20px" }, h("img", { src: u.avatar }))
-    : h("div", { class:"user-av", style:"width:56px;height:56px;font-size:20px" }, (u?.username?.[0] || "?").toUpperCase());
+  // Profile avatar: Discord avatar if linked, else "?"
+  const av = u?.discord_linked && u?.avatar
+    ? h("div", { class:"user-av", style:"width:64px;height:64px;font-size:24px" }, h("img", { src: u.avatar }))
+    : h("div", { class:"user-av", style:"width:64px;height:64px;font-size:28px;font-weight:500" }, "?");
   root.appendChild(h("div", { class:"section-card reveal" },
     h("h3", { style:"font-family:Outfit;font-size:18px;font-weight:500;margin-bottom:20px" }, "Profile"),
-    h("div", { style:"display:flex;align-items:center;gap:16px;margin-bottom:24px" }, av, h("div", {},
-      h("div", { style:"font-family:Outfit;font-size:22px;display:flex;align-items:center;gap:8px" }, u?.username, u?.premium_tier ? h("span", { class:"badge-pro", style:"font-size:10px" }, "PRO") : ""),
-      h("div", { class:"muted", style:"font-size:11px" }, `${(u?.auth_method||"").toUpperCase()} · ${(u?.id||"").slice(0,8)}`)
+    h("div", { style:"display:flex;align-items:center;gap:20px;margin-bottom:24px" }, av, h("div", {},
+      h("div", { style:"font-family:Outfit;font-size:24px;font-weight:500;display:flex;align-items:center;gap:8px" },
+        u?.username || "—",
+        u?.premium_tier ? h("span", { class:"badge-pro", style:"font-size:10px" }, "PRO") : ""
+      ),
+      h("div", { class:"muted", style:"font-size:12px;font-family:JetBrains Mono;margin-top:4px" },
+        `${(u?.auth_method||"").toUpperCase()} · member since ${u?.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}`
+      )
     )),
     h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Email"), h("span", { class:"val" }, u?.email || "—")),
-    h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Username"), h("span", { class:"val" }, u?.username || "")),
-    h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Discord linked"), h("span", { class:"val" }, u?.discord_linked ? "✓ Yes" : "— No")),
-    !u?.discord_linked ? h("button", { class:"btn-primary btn-sm", style:"margin-top:12px", onclick: async () => {
+    h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Username"), h("span", { class:"val" }, u?.username || "—")),
+    h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Account ID"), h("span", { class:"val", style:"font-size:11px" }, u?.id || "—")),
+    h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Auth method"), h("span", { class:"val" }, (u?.auth_method || "—").toUpperCase())),
+    h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Discord linked"),
+      u?.discord_linked
+        ? h("span", { class:"val", style:"color:#10B981" }, "✓ Connected")
+        : h("span", { class:"val", style:"color:#F59E0B" }, "— Not linked")),
+    u?.discord_id ? h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Discord ID"), h("span", { class:"val" }, u.discord_id)) : "",
+    !u?.discord_linked ? h("button", { class:"btn-primary btn-sm", style:"margin-top:16px", onclick: async () => {
       try { const r = await api("/auth/discord/url?mode=link"); location.href = r.url; } catch (e) { toast(e.message,"error"); }
-    } }, "Link Discord") : ""
+    } }, "Link Discord account") : ""
   ));
   root.appendChild(h("div", { class:"section-card reveal" },
     h("div", { style:"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px" },
