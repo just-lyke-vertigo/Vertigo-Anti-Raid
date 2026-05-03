@@ -421,17 +421,51 @@ async function renderOverview(root) {
 
   let stats = null, feed = [];
   try { stats = await api(`/servers/${srv.id}/stats`); } catch {}
+
+  // If bot isn't in the server, show waiting state (not zeros)
+  if (!stats?.bot_joined) {
+    root.appendChild(h("div", { class:"page-head" },
+      h("div", {},
+        h("div", { class:"label-eyebrow" }, "// waiting"),
+        h("h1", { class:"page-title" }, srv.name),
+        h("p", { class:"page-sub" }, "Vertigo is waiting for the bot to join your Discord server.")
+      )
+    ));
+    root.appendChild(h("div", { class:"section-card fade-up", style:"text-align:center;padding:64px 24px" },
+      h("div", { style:"font-size:48px;margin-bottom:12px;animation:shieldPulse 2.6s ease-in-out infinite;width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#3a45c8);display:flex;align-items:center;justify-content:center;margin:0 auto 24px" },
+        h("span", { html: '<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"/></svg>' })
+      ),
+      h("h2", { class:"page-title", style:"margin:0" }, "Invite the bot to start live monitoring"),
+      h("p", { class:"page-sub", style:"margin:12px auto 24px;max-width:480px" }, "Stats, member counts, raid detection, and commands all activate the moment Vertigo joins your server."),
+      h("div", { class:"row gap-sm", style:"justify-content:center" },
+        h("button", { class:"btn-primary", onclick: () => inviteBot(srv.discord_guild_id) }, "Invite Vertigo to ", srv.name),
+        h("button", { class:"btn-ghost", onclick: async () => {
+          try { await api(`/servers/${srv.id}/sync`, { method:"POST" }); router(); }
+          catch (e) { toast(e.message,"error"); }
+        } }, "I've invited it · Refresh")
+      )
+    ));
+    // Poll for bot presence every 5s
+    state.polling = setInterval(async () => {
+      try {
+        await api(`/servers/${srv.id}/sync`, { method:"POST" });
+        const ns = await api(`/servers/${srv.id}/stats`);
+        if (ns.bot_joined) { stopPolling(); router(); }
+      } catch {}
+    }, 5000);
+    return;
+  }
+
+  // Bot IS joined — full live dashboard
   try { feed = (await api(`/notifications?server_id=${srv.id}`)).slice(0, 8); } catch {}
 
   const header = h("div", { class:"page-head" },
     h("div", {},
       h("div", { class:"label-eyebrow" }, "// overview"),
       h("h1", { class:"page-title" }, srv.name),
-      h("p", { class:"page-sub" }, stats?.bot_joined ? "Live defense active · real-time monitoring" : "Bot not in server — invite Vertigo to activate live data")
+      h("p", { class:"page-sub" }, "Live defense active · real-time monitoring")
     ),
-    stats?.bot_joined
-      ? h("div", { class:"badge" }, h("span", { class:"pulse-dot-bg pulse-dot pulse-dot-lg" }), " SHIELDS UP")
-      : h("button", { class:"btn-primary", onclick: () => inviteBot(srv.discord_guild_id) }, "Invite Vertigo now")
+    h("div", { class:"badge" }, h("span", { class:"pulse-dot-bg pulse-dot pulse-dot-lg" }), " SHIELDS UP")
   );
   root.appendChild(header);
 
@@ -439,7 +473,7 @@ async function renderOverview(root) {
     ["Raids blocked", stats?.raids_blocked ?? 0, "All time", "#5865F2", ICON.shield, "raids"],
     ["Backups", stats?.backups_count ?? 0, "Restorable snapshots", "#22D3EE", ICON.save, "backups"],
     ["Commands", stats?.commands_run ?? 0, "Executed total", "#F59E0B", ICON.term, "commands"],
-    ["Uptime", `${stats?.uptime_pct ?? 0}%`, stats?.bot_joined ? "Bot online" : "Bot offline", "#10B981", '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>', "uptime"],
+    ["Uptime", `${stats?.uptime_pct ?? 0}%`, "Bot online", "#10B981", '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>', "uptime"],
   ];
   const grid = h("div", { class:"grid-stats" });
   statCfg.forEach(([label, val, sub, color, ico, key]) => {
@@ -464,7 +498,7 @@ async function renderOverview(root) {
 
   const pulseCard = h("div", { class:"pulse-card reveal" },
     h("div", { class:"label-eyebrow" }, "// members · live"),
-    h("h3", { style:"font-family:Outfit;font-size:18px;font-weight:500;margin:4px 0 16px;display:flex;align-items:center;gap:8px" }, "Server pulse", stats?.bot_joined ? h("span", { class:"pulse-dot-bg pulse-dot" }) : ""),
+    h("h3", { style:"font-family:Outfit;font-size:18px;font-weight:500;margin:4px 0 16px;display:flex;align-items:center;gap:8px" }, "Server pulse", h("span", { class:"pulse-dot-bg pulse-dot" })),
     h("div", { class:"pulse-item" },
       h("span", { html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#22D3EE" stroke-width="1.7"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>' }),
       h("div", {},
@@ -505,8 +539,10 @@ async function renderOverview(root) {
   let lastSeen = feed[0]?.created_at || null;
   state.polling = setInterval(async () => {
     try {
-      // refresh stats
+      // Actively sync member counts from Discord
+      await api(`/servers/${srv.id}/sync`, { method:"POST" });
       const ns = await api(`/servers/${srv.id}/stats`);
+      if (!ns.bot_joined) { stopPolling(); router(); return; }
       const applyTick = (slot, val) => {
         const el = $(`[data-stat="${slot}"] .stat-val`) || $(`[data-slot="${slot}"]`);
         if (el && el.textContent !== String(val)) {
@@ -521,7 +557,6 @@ async function renderOverview(root) {
       applyTick("members", ns.members);
       applyTick("online", ns.online);
       const ls = $('[data-slot="last-sync"]'); if (ls && ns.last_synced_at) ls.textContent = new Date(ns.last_synced_at).toLocaleTimeString();
-      // new notifications?
       if (lastSeen) {
         const fresh = await api(`/notifications?server_id=${srv.id}&since=${encodeURIComponent(lastSeen)}`);
         if (fresh.length) {
@@ -533,9 +568,6 @@ async function renderOverview(root) {
       }
     } catch {}
   }, 5000);
-
-  // Trigger a sync on server for freshest member counts
-  api(`/servers/${srv.id}/sync`, { method:"POST" }).catch(() => {});
 }
 
 function renderFeed(container, feed, newIds=[]) {
