@@ -38,6 +38,7 @@ input,select,textarea{font-family:inherit;color:#fff}
 .display-md{font-size:36px;font-weight:600;margin:8px 0 6px}
 .hero-cta-row{margin-top:40px}
 .lead{color:var(--txt2);font-size:18px;line-height:1.6;max-width:560px;margin:24px 0 0}
+.cta-lead{margin:24px auto 0}
 .label-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .title-s{font-weight:500;color:#fff;font-family:'Outfit',sans-serif}
 .gradient-text{background:linear-gradient(120deg,#fff 0%,#c7c8ff 60%,#5865F2 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
