@@ -149,6 +149,23 @@ async function router() {
 async function renderLanding() {
   const tpl = $("#tpl-landing").content.cloneNode(true);
   $("#app").appendChild(tpl);
+
+  // If user is logged in, swap nav CTAs + hero button to "Dashboard"
+  if (state.user) {
+    const navCta = $(".nav-cta");
+    if (navCta) {
+      navCta.innerHTML = "";
+      navCta.appendChild(h("a", { href:"#/dashboard", class:"btn-primary btn-sm" }, "Dashboard"));
+    }
+    const heroBtn = $('[data-testid="hero-get-started"]');
+    if (heroBtn) {
+      heroBtn.setAttribute("href", "#/dashboard");
+      heroBtn.innerHTML = 'Open dashboard <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6l6 6-6 6"/></svg>';
+    }
+    const ctaButtons = $$(".cta .btn-primary, .cta .btn-ghost");
+    if (ctaButtons[0]) { ctaButtons[0].setAttribute("href", "#/dashboard"); ctaButtons[0].textContent = "Open dashboard"; }
+  }
+
   try {
     const s = await fetch(API + "/public/stats").then(r => r.json());
     const fmt = (n) => n > 999 ? (n/1000).toFixed(1)+"k" : String(n);
@@ -761,13 +778,12 @@ function renderSettings(root) {
         u?.premium_tier ? h("span", { class:"badge-pro", style:"font-size:10px" }, "PRO") : ""
       ),
       h("div", { class:"muted", style:"font-size:12px;font-family:JetBrains Mono;margin-top:4px" },
-        `${(u?.auth_method||"").toUpperCase()} · member since ${u?.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}`
+        `member since ${u?.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}`
       )
     )),
     h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Email"), h("span", { class:"val" }, u?.email || "—")),
     h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Username"), h("span", { class:"val" }, u?.username || "—")),
     h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Account ID"), h("span", { class:"val", style:"font-size:11px" }, u?.id || "—")),
-    h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Auth method"), h("span", { class:"val" }, (u?.auth_method || "—").toUpperCase())),
     h("div", { class:"setting-row" }, h("span", { class:"muted" }, "Discord linked"),
       u?.discord_linked
         ? h("span", { class:"val", style:"color:#10B981" }, "✓ Connected")
