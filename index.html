@@ -1,179 +1,437 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vertigo · Anti-Raid Bot for Discord</title>
-  <meta name="description" content="The most ruthless anti-raid bot for Discord. Stop nukes before they happen." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-<div id="app"></div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vertigo · Anti-Raid Bot for Discord</title>
+    <meta name="description" content="The most ruthless anti-raid bot for Discord. Stop nukes before they happen." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app"></div>
 
-<template id="tpl-landing">
-  <header class="glass-bar sticky">
-    <div class="container nav">
-      <a href="#/" class="brand"><span class="logo-box"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"/></svg></span>Vertigo</a>
-      <nav class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#how">How it works</a>
-        <a href="#/pricing">Pricing</a>
-        <a href="#stats">Stats</a>
-      </nav>
-      <div class="nav-cta">
-        <a href="#/login" class="text-link">Login</a>
-        <a href="#/signup" class="btn-primary btn-sm" data-testid="nav-signup">Get Started</a>
-      </div>
-    </div>
-  </header>
-
-  <section class="hero grain">
-    <div class="hero-glow"></div>
-    <div class="container hero-grid">
-      <div class="fade-up">
-        <div class="pill-live"><span class="ping"></span>Defending <span data-slot="servers-count">—</span> servers</div>
-        <h1 class="display-xl">Stop nukes <span class="gradient-text">before they happen.</span></h1>
-        <p class="lead">Vertigo is the most ruthless anti-raid bot for Discord. Detect mass bans, channel deletions, and coordinated raids in milliseconds — automatically.</p>
-        <div class="row gap-sm hero-cta-row">
-          <a href="#/signup" class="btn-primary" data-testid="hero-get-started">Protect my server <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6l6 6-6 6"/></svg></a>
-          <a href="#features" class="btn-ghost">Learn more</a>
-        </div>
-        <div class="row gap-lg checks">
-          <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Free forever plan</span>
-          <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 99.99% accuracy</span>
-          <span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10B981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Setup in 30s</span>
-        </div>
-      </div>
-      <div class="shield-stage fade-up" style="animation-delay:150ms">
-        <div class="ring ring-1"></div>
-        <div class="ring ring-2"></div>
-        <div class="shield-orb shield-pulse">
-          <svg viewBox="0 0 24 24" width="72" height="72" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"/></svg>
-        </div>
-        <div class="float-chip chip-top">raid_blocked</div>
-        <div class="float-chip chip-bot" style="color:#10B981">nuke_prevented</div>
-      </div>
-    </div>
-  </section>
-
-  <section id="stats" class="stats-band reveal">
-    <div class="container grid-4">
-      <div><div class="num" data-slot="servers">—</div><div class="label-eyebrow">Servers protected</div></div>
-      <div><div class="num" data-slot="raids">—</div><div class="label-eyebrow">Raids blocked</div></div>
-      <div><div class="num" data-slot="members">—</div><div class="label-eyebrow">Members defended</div></div>
-      <div><div class="num">99.99%</div><div class="label-eyebrow">Accuracy</div></div>
-    </div>
-  </section>
-
-  <section id="features" class="section">
-    <div class="container">
-      <div class="max-w reveal">
-        <div class="label-eyebrow">// arsenal</div>
-        <h2 class="display-lg">Everything you need to <span class="gradient-text">never get nuked again</span>.</h2>
-      </div>
-      <div class="feature-grid">
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"/></svg></div><h3>Anti-Nuke Engine</h3><p>Mass ban, kick, channel and role deletion all blocked instantly with smart pattern detection.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div><h3>Raid Detection</h3><p>Adaptive sensitivity catches join-floods before they damage your community.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg></div><h3>Save &amp; Restore</h3><p>One-click snapshots of channels, roles &amp; permissions. Restore in under 60s.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div><h3>Real-time Alerts</h3><p>Severity-tagged notifications. Filter by critical, warning, info.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div><h3>Web Commands</h3><p>Ban, kick, lockdown — execute moderation commands directly from the dashboard.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><h3>Auto-Lockdown</h3><p>Server slams shut at the first sign of coordinated attack.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><polyline points="20 6 9 17 4 12"/></svg></div><h3>Trusted Whitelist</h3><p>Exempt your mod team and verified bots from all defense triggers automatically.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><h3>Account-Age Filter</h3><p>Auto-kick brand-new accounts during active raids. Configurable threshold.</p></div>
-        <div class="card hover-lift reveal"><div class="icon-sq"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><h3>Instant Response</h3><p>Under 50ms reaction time. Threats neutralised before they finish typing.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="how" class="section bordered">
-    <div class="container how-grid">
-      <div class="reveal">
-        <div class="label-eyebrow">// how it works</div>
-        <h2 class="display-lg">Three steps.<br/>Zero compromises.</h2>
-        <ol class="steps">
-          <li><span class="step-num">1</span><div><div class="step-title">Connect Discord</div><div class="step-desc">Login with Discord — we'll list every server you can manage.</div></div></li>
-          <li><span class="step-num">2</span><div><div class="step-title">Invite Vertigo</div><div class="step-desc">Pick your servers, invite the bot, tune your defenses.</div></div></li>
-          <li><span class="step-num">3</span><div><div class="step-title">Sleep at night</div><div class="step-desc">24/7 monitoring. Pinged only when it matters.</div></div></li>
-        </ol>
-      </div>
-      <div class="card terminal reveal">
-        <div class="term-head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="term-title">vertigo ~ live activity</span></div>
-        <div class="term-body">
-          <p><span class="c-cyan">[12:01:43]</span> <span class="c-green">[OK]</span> Backup created · channels(43) roles(18)</p>
-          <p><span class="c-cyan">[12:03:11]</span> <span class="c-amber">[WARN]</span> Join surge: 9 accounts in 30s — verification triggered</p>
-          <p><span class="c-cyan">[12:03:14]</span> <span class="c-red">[CRIT]</span> Mass ban attempt by Rogue#1337 — quarantined</p>
-          <p><span class="c-cyan">[12:03:14]</span> <span class="c-green">[OK]</span> Auto-lockdown engaged</p>
-          <p><span class="c-cyan">[12:05:02]</span> <span class="c-green">[OK]</span> Threat neutralized · 0 members lost</p>
-          <p class="muted">█</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section cta reveal">
-    <div class="container center max-w">
-      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#22D3EE" stroke-width="1.5" style="margin:0 auto 24px;display:block"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      <h2 class="display-lg">Your server deserves a guardian.</h2>
-      <p class="lead cta-lead">Join the many users who sleep peacefully with our protection.</p>
-      <div class="row gap-sm" style="justify-content:center;margin-top:32px">
-        <a href="#/signup" class="btn-primary">Start free</a>
-        <a href="#/pricing" class="btn-ghost">View pricing</a>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="container center muted">
-      <p>Vertigo Anti-Raid · Built for Discord communities</p>
-      <p>© <span id="year"></span> Vertigo Labs</p>
-    </div>
-  </footer>
-</template>
-
-<template id="tpl-auth">
-  <div class="auth-wrap">
-    <a href="#/" class="brand auth-brand"><span class="logo-box"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"/></svg></span>Vertigo</a>
-    <div class="auth-card fade-up">
-      <div class="label-eyebrow" data-slot="eyebrow"></div>
-      <h1 class="display-md" data-slot="title"></h1>
-      <p class="muted" data-slot="subtitle"></p>
-      <button class="btn-primary full" data-action="discord" data-testid="auth-discord-btn">Continue with Discord</button>
-      <div class="divider"><span class="line"></span><span class="or">OR</span><span class="line"></span></div>
-      <form data-slot="form" class="form">
-        <div data-slot="fields"></div>
-        <button type="submit" class="btn-primary full" data-slot="submit"></button>
-      </form>
-      <p class="muted center small" data-slot="switch"></p>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-dashboard-layout">
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <a href="#/" class="brand"><span class="logo-box"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"/></svg></span>Vertigo</a>
-      </div>
-      <div class="sidebar-server" data-slot="server-selector"></div>
-      <nav class="sidebar-nav" data-slot="nav"></nav>
-      <div class="sidebar-foot" data-slot="foot"></div>
-    </aside>
-    <main class="main">
-      <header class="glass-bar main-bar">
-        <div class="crumbs"><span class="title-s">Control Centre</span><span class="sep">/</span><span data-slot="crumb"></span></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <a href="#/add-server" class="btn-ghost btn-sm" data-testid="header-add-server">+ Add server</a>
-          <button class="btn-ghost btn-sm" data-action="invite" data-testid="header-invite-btn">Invite bot</button>
+    <template id="tpl-landing">
+      <header class="glass-bar sticky">
+        <div class="container nav">
+          <a href="#/" class="brand">
+            <span class="logo-box">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z" />
+              </svg>
+            </span>
+            Vertigo
+          </a>
+          <nav class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#leaderboard">Leaderboard</a>
+            <a href="#/pricing">Pricing</a>
+            <a href="#changelog">Changelog</a>
+          </nav>
+          <div class="nav-cta">
+            <a href="#/login" class="text-link">Login</a>
+            <a href="#/signup" class="btn-primary btn-sm" data-testid="nav-signup">Get Started</a>
+          </div>
         </div>
       </header>
-      <div class="page" data-slot="page"></div>
-    </main>
-  </div>
-</template>
 
-<script src="app.js"></script>
-</body>
+      <section class="hero grain">
+        <div class="hero-glow"></div>
+        <div class="container hero-grid">
+          <div class="fade-up">
+            <div class="pill-live">
+              <span class="ping"></span>
+              Defending
+              <span data-slot="servers-count">—</span>
+              servers
+            </div>
+            <h1 class="display-xl">
+              Stop nukes
+              <span class="gradient-text">before they happen.</span>
+            </h1>
+            <p class="lead">
+              Vertigo is the most ruthless anti-nuke bot for Discord. Stop mass bans, channel wipes, and coordinated
+              destruction in milliseconds — automatically.
+            </p>
+            <div class="row gap-sm hero-cta-row">
+              <a href="#/signup" class="btn-primary" data-testid="hero-get-started">
+                Protect my server
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14m-6-6l6 6-6 6" />
+                </svg>
+              </a>
+              <a href="#features" class="btn-ghost">Learn more</a>
+            </div>
+            <div class="row gap-lg checks">
+              <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                Free forever plan
+              </span>
+              <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                99.99% accuracy
+              </span>
+              <span>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                Setup in 30s
+              </span>
+            </div>
+          </div>
+          <div class="shield-stage fade-up" style="animation-delay: 150ms">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="shield-orb shield-pulse">
+              <svg viewBox="0 0 24 24" width="72" height="72" fill="none" stroke="white" stroke-width="1.5">
+                <path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z" />
+              </svg>
+            </div>
+            <div class="float-chip chip-top">raid_blocked</div>
+            <div class="float-chip chip-bot" style="color: #10b981">nuke_prevented</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="stats" class="stats-band reveal">
+        <div class="container grid-4">
+          <div>
+            <div class="num" data-slot="servers-protected">—</div>
+            <div class="label-eyebrow">Servers protected</div>
+          </div>
+          <div>
+            <div class="num" data-slot="nukes-blocked">—</div>
+            <div class="label-eyebrow">Nukes blocked</div>
+          </div>
+          <div>
+            <div class="num" data-slot="members-defended">—</div>
+            <div class="label-eyebrow">Members defended</div>
+          </div>
+          <div>
+            <div class="num">99.99%</div>
+            <div class="label-eyebrow">Accuracy</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="leaderboard" class="section bordered reveal">
+        <div class="container">
+          <div class="max-w">
+            <div class="label-eyebrow">leaderboard · live</div>
+            <h2 class="display-lg">
+              Top defended
+              <span class="gradient-text">servers.</span>
+            </h2>
+            <p class="lead">Real-time rankings of the biggest communities Vertigo has kept safe from nuke attempts.</p>
+          </div>
+          <div class="leaderboard" data-slot="leaderboard">
+            <p class="muted" style="padding: 24px 0">Loading leaderboard…</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section">
+        <div class="container">
+          <div class="max-w reveal">
+            <div class="label-eyebrow">arsenal</div>
+            <h2 class="display-lg">
+              Everything you need to
+              <span class="gradient-text">never get nuked again</span>
+              .
+            </h2>
+          </div>
+          <div class="feature-grid">
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z" />
+                </svg>
+              </div>
+              <h3>Anti-Nuke Engine</h3>
+              <p>Mass ban, kick, channel and role deletion blocked instantly. Raid detection bundled in.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+                </svg>
+              </div>
+              <h3>Lightning Audit</h3>
+              <p>Every moderator action logged with context. See exactly who did what, when, and why.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3>Save &amp; Restore</h3>
+              <p>One-click snapshots of channels, roles &amp; permissions. Restore in under 60s.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.7 21a2 2 0 01-3.4 0" />
+                </svg>
+              </div>
+              <h3>Real-time Alerts</h3>
+              <p>Severity-tagged notifications. Filter by critical, warning, info.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <polyline points="4 17 10 11 4 5" />
+                  <line x1="12" y1="19" x2="20" y2="19" />
+                </svg>
+              </div>
+              <h3>Web Commands</h3>
+              <p>Ban, kick, lockdown — execute moderation commands directly from the dashboard.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+              </div>
+              <h3>Auto-Lockdown</h3>
+              <p>Server slams shut at the first sign of coordinated attack.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <h3>Trusted Whitelist</h3>
+              <p>Exempt your mod team and verified bots from all defense triggers automatically.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              <h3>Account-Age Filter</h3>
+              <p>Auto-kick brand-new accounts during active raids. Configurable threshold.</p>
+            </div>
+            <div class="card hover-lift reveal">
+              <div class="icon-sq">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#5865F2" stroke-width="1.7">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+              </div>
+              <h3>Instant Response</h3>
+              <p>Under 50ms reaction time. Threats neutralised before they finish typing.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how" class="section bordered">
+        <div class="container how-grid">
+          <div class="reveal">
+            <div class="label-eyebrow">how it works</div>
+            <h2 class="display-lg">
+              Three steps.
+              <br />
+              Zero compromises.
+            </h2>
+            <ol class="steps">
+              <li>
+                <span class="step-num">1</span>
+                <div>
+                  <div class="step-title">Connect Discord</div>
+                  <div class="step-desc">Login with Discord — we'll list every server you can manage.</div>
+                </div>
+              </li>
+              <li>
+                <span class="step-num">2</span>
+                <div>
+                  <div class="step-title">Invite Vertigo</div>
+                  <div class="step-desc">Pick your servers, invite the bot, tune your defenses.</div>
+                </div>
+              </li>
+              <li>
+                <span class="step-num">3</span>
+                <div>
+                  <div class="step-title">Sleep at night</div>
+                  <div class="step-desc">24/7 monitoring. Pinged only when it matters.</div>
+                </div>
+              </li>
+            </ol>
+          </div>
+          <div class="card terminal reveal">
+            <div class="term-head">
+              <span class="dot r"></span>
+              <span class="dot y"></span>
+              <span class="dot g"></span>
+              <span class="term-title">vertigo ~ live activity</span>
+            </div>
+            <div class="term-body">
+              <p>
+                <span class="c-cyan">[12:01:43]</span>
+                <span class="c-green">[OK]</span>
+                Backup created · channels(43) roles(18)
+              </p>
+              <p>
+                <span class="c-cyan">[12:03:11]</span>
+                <span class="c-amber">[WARN]</span>
+                Join surge: 9 accounts in 30s — verification triggered
+              </p>
+              <p>
+                <span class="c-cyan">[12:03:14]</span>
+                <span class="c-red">[CRIT]</span>
+                Mass ban attempt by Rogue#1337 — quarantined
+              </p>
+              <p>
+                <span class="c-cyan">[12:03:14]</span>
+                <span class="c-green">[OK]</span>
+                Auto-lockdown engaged
+              </p>
+              <p>
+                <span class="c-cyan">[12:05:02]</span>
+                <span class="c-green">[OK]</span>
+                Threat neutralized · 0 members lost
+              </p>
+              <p class="muted">█</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section cta reveal">
+        <div class="container center max-w">
+          <svg
+            viewBox="0 0 24 24"
+            width="32"
+            height="32"
+            fill="none"
+            stroke="#22D3EE"
+            stroke-width="1.5"
+            style="margin: 0 auto 24px; display: block"
+          >
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+          <h2 class="display-lg">Your server deserves a guardian.</h2>
+          <p class="lead cta-lead">Join the many users who sleep peacefully with our protection.</p>
+          <div class="row gap-sm" style="justify-content: center; margin-top: 32px">
+            <a href="#/signup" class="btn-primary">Start free</a>
+            <a href="#/pricing" class="btn-ghost">View pricing</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="changelog" class="section bordered reveal">
+        <div class="container">
+          <div class="max-w">
+            <div class="label-eyebrow">changelog</div>
+            <h2 class="display-lg">
+              What's new in
+              <span class="gradient-text">Vertigo.</span>
+            </h2>
+          </div>
+          <div class="changelog-list" data-slot="changelog"></div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="container center muted">
+          <p>Vertigo Anti-Nuke · Built for Discord communities</p>
+          <p>
+            ©
+            <span id="year"></span>
+            Vertigo Labs · v
+            <span data-slot="version">2.2.0</span>
+          </p>
+        </div>
+      </footer>
+    </template>
+
+    <template id="tpl-auth">
+      <div class="auth-wrap">
+        <a href="#/" class="brand auth-brand">
+          <span class="logo-box">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z" />
+            </svg>
+          </span>
+          Vertigo
+        </a>
+        <div class="auth-card fade-up">
+          <div class="label-eyebrow" data-slot="eyebrow"></div>
+          <h1 class="display-md" data-slot="title"></h1>
+          <p class="muted" data-slot="subtitle"></p>
+          <button class="btn-primary full" data-action="discord" data-testid="auth-discord-btn">
+            Continue with Discord
+          </button>
+          <div class="divider">
+            <span class="line"></span>
+            <span class="or">OR</span>
+            <span class="line"></span>
+          </div>
+          <form data-slot="form" class="form">
+            <div data-slot="fields"></div>
+            <button type="submit" class="btn-primary full" data-slot="submit"></button>
+          </form>
+          <p class="muted center small" data-slot="switch"></p>
+        </div>
+      </div>
+    </template>
+
+    <template id="tpl-dashboard-layout">
+      <div class="app-shell">
+        <div class="sidebar-overlay" data-slot="sidebar-overlay"></div>
+        <aside class="sidebar">
+          <div class="sidebar-brand">
+            <a href="#/" class="brand">
+              <span class="logo-box">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z" />
+                </svg>
+              </span>
+              Vertigo
+            </a>
+          </div>
+          <div class="sidebar-server" data-slot="server-selector"></div>
+          <nav class="sidebar-nav" data-slot="nav"></nav>
+          <div class="sidebar-foot" data-slot="foot"></div>
+        </aside>
+        <main class="main">
+          <header class="glass-bar main-bar">
+            <button class="hamburger" data-slot="hamburger" aria-label="Menu">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <div class="crumbs">
+              <span class="title-s">Control Centre</span>
+              <span class="sep">/</span>
+              <span data-slot="crumb"></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <a href="#/add-server" class="btn-ghost btn-sm" data-testid="header-add-server">+ Add server</a>
+              <button class="btn-ghost btn-sm" data-action="invite" data-testid="header-invite-btn">Invite bot</button>
+            </div>
+          </header>
+          <div class="page" data-slot="page"></div>
+        </main>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
 </html>
