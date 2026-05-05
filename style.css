@@ -240,6 +240,11 @@ textarea {
   background: rgba(255, 255, 255, 0.04);
   border-color: var(--border-h);
 }
+.btn-ghost.full {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 22px;
+}
 .text-link {
   color: var(--txt2);
   font-size: 14px;
@@ -1256,6 +1261,9 @@ textarea {
   padding: 16px 0;
   border-bottom: 1px solid var(--border);
 }
+.srow-center {
+  align-items: center;
+}
 .srow:last-child {
   border: 0;
 }
@@ -1313,8 +1321,88 @@ textarea {
   width: 96px;
 }
 .range {
-  width: 176px;
-  accent-color: var(--primary);
+  width: 100%;
+  max-width: 220px;
+  height: 32px;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+.range-modern {
+  --pct: 50%;
+  --track: #1c1c20;
+  --fill: linear-gradient(90deg, #5865f2 0%, #7c87f7 100%);
+}
+.range-modern::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--track);
+  background-image: var(--fill);
+  background-repeat: no-repeat;
+  background-size: var(--pct) 100%;
+  border: 1px solid var(--border);
+}
+.range-modern::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--track);
+  border: 1px solid var(--border);
+}
+.range-modern::-moz-range-progress {
+  height: 6px;
+  border-radius: 9999px;
+  background-image: var(--fill);
+}
+.range-modern::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #5865f2;
+  box-shadow:
+    0 4px 12px rgba(88, 101, 242, 0.45),
+    0 0 0 4px rgba(88, 101, 242, 0.12);
+  margin-top: -8px;
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s;
+}
+.range-modern::-webkit-slider-thumb:hover,
+.range-modern:focus::-webkit-slider-thumb {
+  transform: scale(1.12);
+  box-shadow:
+    0 6px 18px rgba(88, 101, 242, 0.6),
+    0 0 0 6px rgba(88, 101, 242, 0.18);
+}
+.range-modern::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #5865f2;
+  box-shadow:
+    0 4px 12px rgba(88, 101, 242, 0.45),
+    0 0 0 4px rgba(88, 101, 242, 0.12);
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s;
+}
+.range-modern::-moz-range-thumb:hover,
+.range-modern:focus::-moz-range-thumb {
+  transform: scale(1.12);
+  box-shadow:
+    0 6px 18px rgba(88, 101, 242, 0.6),
+    0 0 0 6px rgba(88, 101, 242, 0.18);
+}
+.range-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 40px;
 }
 
 /* Tables */
@@ -1605,6 +1693,12 @@ textarea {
   max-width: 960px;
   margin-left: auto;
   margin-right: auto;
+  align-items: stretch;
+}
+.pricing-grid > * {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 .plan-card {
   background: var(--surface);
@@ -1613,6 +1707,65 @@ textarea {
   padding: 32px;
   display: flex;
   flex-direction: column;
+}
+.plan-card.centered {
+  text-align: center;
+  align-items: center;
+  position: relative;
+}
+.plan-card.centered .plan-name,
+.plan-card.centered .plan-price {
+  justify-content: center;
+}
+.plan-card.centered .plan-features {
+  text-align: left;
+  width: 100%;
+}
+.plan-card .plan-eyebrow {
+  margin-top: 4px;
+}
+.plan-card.is-recommended {
+  border-color: rgba(88, 101, 242, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(88, 101, 242, 0.18),
+    0 12px 32px rgba(88, 101, 242, 0.1);
+}
+.plan-recommended {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  white-space: nowrap;
+}
+.plan-desc {
+  font-size: 14px;
+  margin: 0;
+  max-width: 280px;
+}
+.plan-cta-wrap {
+  margin-top: auto;
+  width: 100%;
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.center-text {
+  text-align: center;
+  justify-content: center;
+}
+.paypal-host {
+  min-height: 48px;
 }
 .plan-name {
   font-family: "Outfit";
