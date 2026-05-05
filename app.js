@@ -207,9 +207,36 @@ async function loadConfig() {
   try {
     state.config = await (await fetch(API + "/public/config")).json();
   } catch {
-    state.config = { discord_client_id: "", discord_configured: false };
+    state.config = {
+      discord_client_id: "",
+      discord_configured: false,
+      paypal_client_id: "",
+      paypal_configured: false,
+    };
   }
   return state.config;
+}
+
+/** Lazy-load the PayPal JS SDK once. Returns the global `paypal` namespace. */
+let _paypalSdkPromise = null;
+function loadPaypalSdk() {
+  if (window.paypal) return Promise.resolve(window.paypal);
+  if (_paypalSdkPromise) return _paypalSdkPromise;
+  const cid = state.config?.paypal_client_id;
+  if (!cid) return Promise.reject(new Error("PayPal not configured"));
+  _paypalSdkPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(
+      cid
+    )}&currency=GBP&intent=capture&components=buttons&enable-funding=card`;
+    s.onload = () => resolve(window.paypal);
+    s.onerror = () => {
+      _paypalSdkPromise = null;
+      reject(new Error("Failed to load PayPal SDK"));
+    };
+    document.head.appendChild(s);
+  });
+  return _paypalSdkPromise;
 }
 
 /** Build the Discord invite URL synchronously (works around mobile popup blockers). */
@@ -262,6 +289,8 @@ const routes = {
   "/login": () => renderAuth("login"),
   "/signup": () => renderAuth("signup"),
   "/pricing": renderPricing,
+  "/leaderboard": () => renderDashboard("leaderboard"),
+  "/changelog": () => renderDashboard("changelog"),
   "/dashboard": () => renderDashboard("overview"),
   "/protection": () => renderDashboard("protection"),
   "/backups": () => renderDashboard("backups"),
@@ -285,6 +314,8 @@ async function router() {
     "/commands",
     "/settings",
     "/add-server",
+    "/leaderboard",
+    "/changelog",
   ].includes(hash);
   if (needsAuth && !state.user) {
     location.hash = "#/login";
@@ -338,14 +369,9 @@ async function renderLanding() {
   // Load public stats (real bot data)
   await refreshLandingStats();
 
-  // Load leaderboard + changelog
-  renderChangelog();
-  await renderLeaderboardSection();
-
-  // Poll stats + leaderboard every 15s for "live" feel
+  // Poll stats every 15s for "live" feel
   state.polling = setInterval(() => {
     refreshLandingStats();
-    renderLeaderboardSection();
   }, 15000);
 }
 
@@ -372,6 +398,10 @@ async function refreshLandingStats() {
 async function renderLeaderboardSection() {
   const container = $('[data-slot="leaderboard"]');
   if (!container) return;
+  await fillLeaderboardContainer(container);
+}
+
+async function fillLeaderboardContainer(container) {
   try {
     const rows = await (await fetch(API + "/public/leaderboard")).json();
     container.innerHTML = "";
@@ -388,7 +418,7 @@ async function renderLeaderboardSection() {
       );
       return;
     }
-    rows.slice(0, 10).forEach((r, i) => {
+    rows.slice(0, 100).forEach((r, i) => {
       const rank = i + 1;
       const iconEl = r.icon
         ? h("img", { class: "lb-icon", src: r.icon, alt: "" })
@@ -411,9 +441,40 @@ async function renderLeaderboardSection() {
   }
 }
 
+/* -------- DASHBOARD: LEADERBOARD PAGE -------- */
+async function renderLeaderboardPage(root) {
+  root.appendChild(
+    h(
+      "div",
+      { class: "page-head" },
+      h(
+        "div",
+        {},
+        h("div", { class: "label-eyebrow" }, "leaderboard · live"),
+        h("h1", { class: "page-title" }, "Top defended servers"),
+        h(
+          "p",
+          { class: "page-sub" },
+          "Real-time rankings of communities Vertigo has kept safe from nuke attempts."
+        )
+      )
+    )
+  );
+  const card = h("div", { class: "section-card reveal" });
+  const list = h("div", { class: "leaderboard" });
+  list.innerHTML = '<p class="muted" style="padding:24px 0">Loading leaderboard…</p>';
+  card.appendChild(list);
+  root.appendChild(card);
+  await fillLeaderboardContainer(list);
+}
+
 function renderChangelog() {
   const container = $('[data-slot="changelog"]');
   if (!container) return;
+  fillChangelogContainer(container);
+}
+
+function fillChangelogContainer(container) {
   container.innerHTML = "";
   CHANGELOG.forEach((entry, idx) => {
     const item = h(
@@ -454,6 +515,26 @@ function renderChangelog() {
     );
     container.appendChild(item);
   });
+}
+
+/* -------- DASHBOARD: CHANGELOG PAGE -------- */
+function renderChangelogPage(root) {
+  root.appendChild(
+    h(
+      "div",
+      { class: "page-head" },
+      h(
+        "div",
+        {},
+        h("div", { class: "label-eyebrow" }, "changelog"),
+        h("h1", { class: "page-title" }, "What's new in Vertigo"),
+        h("p", { class: "page-sub" }, "Every shipped change, newest first.")
+      )
+    )
+  );
+  const wrap = h("div", { class: "changelog-list reveal" });
+  fillChangelogContainer(wrap);
+  root.appendChild(wrap);
 }
 
 /* -------- AUTH -------- */
@@ -570,6 +651,8 @@ async function renderDashboard(page) {
     ["backups", "/backups", "Backups", ICON.save],
     ["notifications", "/notifications", "Alerts", ICON.bell],
     ["commands", "/commands", "Commands", ICON.term],
+    ["leaderboard", "/leaderboard", "Leaderboard", ICON.crown],
+    ["changelog", "/changelog", "Changelog", ICON.rotate],
     ["settings", "/settings", "Settings", ICON.gear],
   ];
   items.forEach(([key, path, label, ico]) => {
@@ -633,8 +716,11 @@ async function renderDashboard(page) {
   );
 
   const srv = activeServer();
+  const STANDALONE_CRUMB = { leaderboard: "Leaderboard", changelog: "Changelog" };
   shell.querySelector('[data-slot="crumb"]').textContent =
-    srv?.name || (state.servers.length ? "Loading..." : "No server selected");
+    STANDALONE_CRUMB[page] ||
+    srv?.name ||
+    (state.servers.length ? "Loading..." : "No server selected");
 
   // Invite-bot button in header: use a real <a> so it works on mobile
   const inviteBtn = shell.querySelector('[data-action="invite"]');
@@ -669,6 +755,18 @@ async function renderDashboard(page) {
 
   if (page === "add-server") {
     await renderAddServer(pageEl);
+    $("#app").appendChild(tpl);
+    return;
+  }
+
+  // Pages that don't require a connected server
+  if (page === "leaderboard") {
+    await renderLeaderboardPage(pageEl);
+    $("#app").appendChild(tpl);
+    return;
+  }
+  if (page === "changelog") {
+    renderChangelogPage(pageEl);
     $("#app").appendChild(tpl);
     return;
   }
@@ -1345,17 +1443,17 @@ async function renderProtection(root) {
     });
     return btn;
   };
-  const row = (title, desc, ctrl) =>
+  const row = (title, desc, ctrl, opts = {}) =>
     h(
       "div",
-      { class: "srow" },
+      { class: `srow ${opts.center ? "srow-center" : ""}` },
       h(
         "div",
         { class: "srow-label" },
         h("div", { class: "srow-title" }, title),
         desc && h("div", { class: "srow-desc" }, desc)
       ),
-      h("div", {}, ctrl)
+      h("div", { class: opts.control || "" }, ctrl)
     );
   const sec = (ico, title, ...rows) =>
     h(
@@ -1428,15 +1526,18 @@ async function renderProtection(root) {
     min: "0",
     max: "100",
     value: s.raid_sensitivity,
-    class: "range",
+    class: "range range-modern",
+    style: `--pct:${s.raid_sensitivity}%`,
   });
   const sensRow = row(
     `Raid sensitivity (${s.raid_sensitivity})`,
     "Higher = more aggressive auto-actions.",
-    sensRange
+    sensRange,
+    { center: true, control: "range-control" }
   );
   sensRange.addEventListener("input", (e) => {
     s.raid_sensitivity = parseInt(e.target.value);
+    sensRange.style.setProperty("--pct", `${s.raid_sensitivity}%`);
     sensRow.querySelector(".srow-title").textContent = `Raid sensitivity (${s.raid_sensitivity})`;
   });
   const maxJoins = h("input", {
@@ -2038,6 +2139,7 @@ function renderSettings(root) {
 /* -------- PRICING (3 tiers: Free / Plus / Pro in GBP) -------- */
 async function renderPricing() {
   await loadUser();
+  await loadConfig();
 
   const wrap = h("div", { class: "pricing-page" });
 
@@ -2093,6 +2195,7 @@ async function renderPricing() {
       price: "2.99",
       suffix: "/month",
       eyebrow: "plus",
+      recommended: true,
       description: "More snapshots, more control, personal alerts.",
       checkColor: "#a8b0ff",
       features: [
@@ -2103,7 +2206,7 @@ async function renderPricing() {
         "Up to 10 servers",
         "Priority support queue",
       ],
-      cta: { label: "Upgrade to Plus", plan: "plus" },
+      cta: { plan: "plus" },
     },
     {
       key: "pro",
@@ -2122,7 +2225,7 @@ async function renderPricing() {
         "Up to 50 servers",
         "Priority 24/7 support",
       ],
-      cta: { label: "Upgrade to Pro", plan: "pro" },
+      cta: { plan: "pro" },
       tracing: true,
     },
   ];
@@ -2155,104 +2258,170 @@ async function renderPricing() {
   body.appendChild(inner);
   wrap.appendChild(body);
 
-  const buildUpgradeBtn = (plan) => {
-    const label =
-      state.user?.plan === plan
-        ? `You're on ${PLAN_DISPLAY[plan]}`
-        : `Upgrade to ${PLAN_DISPLAY[plan]}`;
-    const btn = h(
-      "button",
-      {
-        class: "btn-primary full",
-        disabled: state.user?.plan === plan,
-      },
-      label
-    );
-    btn.addEventListener("click", async () => {
-      if (!state.user) {
-        location.hash = "#/login";
-        return;
-      }
-      btn.disabled = true;
-      btn.textContent = "Processing…";
-      try {
-        const order = await api("/payments/paypal/create-order", {
-          method: "POST",
-          body: { plan },
-        });
-        if (order.demo) {
-          await api(`/payments/paypal/capture/${order.id}`, { method: "POST" });
-          toast(`${PLAN_DISPLAY[plan]} activated (demo)`, "success");
-          await loadUser();
-          location.hash = "#/dashboard";
-          return;
-        }
-        const link = order.links?.find?.((l) => l.rel === "approve")?.href;
-        if (link) location.href = link;
-        else toast("No approval link returned", "error");
-      } catch (err) {
-        toast(err.message, "error");
-        btn.disabled = false;
-        btn.textContent = label;
-      }
-    });
-    return btn;
+  /** Mounts a real PayPal smart button + card button into the given container. */
+  const mountPayPal = (container, plan, statusEl) => {
+    if (!state.config?.paypal_configured) {
+      container.innerHTML = "";
+      container.appendChild(
+        h(
+          "p",
+          { class: "muted small center", style: "padding:16px 0" },
+          "Payments aren't configured on this server yet. Add PAYPAL_CLIENT_ID + PAYPAL_CLIENT_SECRET to your backend."
+        )
+      );
+      return;
+    }
+    if (!state.user) {
+      container.appendChild(
+        h("a", { href: "#/login", class: "btn-primary full center-text" }, `Sign in to subscribe`)
+      );
+      return;
+    }
+    if (state.user?.plan === plan) {
+      container.appendChild(
+        h(
+          "button",
+          { class: "btn-primary full center-text", disabled: true },
+          `You're on ${PLAN_DISPLAY[plan]}`
+        )
+      );
+      return;
+    }
+    container.innerHTML =
+      '<div class="muted small center" style="padding:8px 0">Loading checkout…</div>';
+    loadPaypalSdk()
+      .then((paypal) => {
+        container.innerHTML = "";
+        paypal
+          .Buttons({
+            style: { layout: "vertical", color: "blue", shape: "pill", label: "paypal" },
+            createOrder: async () => {
+              const order = await api("/payments/paypal/create-order", {
+                method: "POST",
+                body: { plan },
+              });
+              return order.id;
+            },
+            onApprove: async (data) => {
+              statusEl.textContent = "Activating…";
+              try {
+                await api(`/payments/paypal/capture/${data.orderID}`, { method: "POST" });
+                toast(`${PLAN_DISPLAY[plan]} activated!`, "success");
+                await loadUser();
+                location.hash = "#/dashboard";
+              } catch (err) {
+                toast(err.message || "Capture failed", "error");
+                statusEl.textContent = "";
+              }
+            },
+            onError: (err) => {
+              console.error("PayPal error", err);
+              toast("Payment failed — please try again", "error");
+              statusEl.textContent = "";
+            },
+            onCancel: () => {
+              statusEl.textContent = "";
+            },
+          })
+          .render(container)
+          .catch((err) => {
+            console.error("PayPal render error", err);
+            container.innerHTML =
+              '<p class="muted small center" style="padding:16px 0">Couldn\'t load PayPal. Refresh and try again.</p>';
+          });
+      })
+      .catch((err) => {
+        container.innerHTML = `<p class="muted small center" style="padding:16px 0">${err.message}</p>`;
+      });
   };
 
   TIERS.forEach((tier) => {
-    const card = h(
-      "div",
-      { class: "plan-card reveal" },
-      h("div", { class: "label-eyebrow" }, tier.eyebrow),
+    const card = h("div", {
+      class: `plan-card centered reveal ${tier.recommended ? "is-recommended" : ""}`,
+    });
+    if (tier.recommended) {
+      card.appendChild(h("span", { class: "plan-recommended" }, "Recommended"));
+    }
+    card.appendChild(h("div", { class: "label-eyebrow plan-eyebrow" }, tier.eyebrow));
+    card.appendChild(
       h(
         "div",
         { class: "plan-name" },
         tier.name,
         tier.key === "pro" ? h("span", { html: ICON.crown, style: "color:#F59E0B" }) : ""
-      ),
+      )
+    );
+    card.appendChild(
       h(
         "div",
         { class: "plan-price" },
         h("span", { class: "amt" }, `${CURRENCY_SYMBOL}${tier.price}`),
         h("span", { class: "per" }, tier.suffix)
-      ),
-      h("p", { class: "muted", style: "font-size:14px" }, tier.description),
+      )
+    );
+    card.appendChild(h("p", { class: "muted plan-desc" }, tier.description));
+    card.appendChild(
       h(
         "ul",
         { class: "plan-features" },
         ...tier.features.map((f) =>
           h("li", {}, h("span", { html: ICON.check, style: `color:${tier.checkColor}` }), f)
         )
-      ),
-      tier.cta.href
-        ? h(
-            "a",
-            {
-              href: tier.cta.href,
-              class: tier.cta.ghost ? "btn-ghost" : "btn-primary full",
-              style: "text-align:center;justify-content:center",
-            },
-            tier.cta.label
-          )
-        : buildUpgradeBtn(tier.cta.plan),
-      tier.cta.plan
-        ? h(
-            "p",
-            {
-              class: "muted",
-              style: "font-size:10px;text-align:center;margin-top:12px",
-            },
-            "Cancel anytime · Secure PayPal · Billed in GBP"
-          )
-        : ""
+      )
     );
+
+    // Bottom CTA wrapper — guarantees vertical alignment across all 3 cards
+    const ctaWrap = h("div", { class: "plan-cta-wrap" });
+    if (tier.cta.href) {
+      ctaWrap.appendChild(
+        h(
+          "a",
+          {
+            href: tier.cta.href,
+            class: tier.cta.ghost ? "btn-ghost full center-text" : "btn-primary full center-text",
+          },
+          tier.cta.label
+        )
+      );
+      ctaWrap.appendChild(
+        h(
+          "p",
+          {
+            class: "muted",
+            style: "font-size:10px;text-align:center;margin-top:12px",
+          },
+          "Free forever · No card needed"
+        )
+      );
+    } else {
+      const status = h("p", {
+        class: "muted small center",
+        style: "margin:0;font-size:11px",
+      });
+      const ppHost = h("div", { class: "paypal-host" });
+      ctaWrap.appendChild(ppHost);
+      ctaWrap.appendChild(status);
+      ctaWrap.appendChild(
+        h(
+          "p",
+          {
+            class: "muted",
+            style: "font-size:10px;text-align:center;margin-top:12px",
+          },
+          "Cancel anytime · PayPal or Card · Billed in GBP"
+        )
+      );
+      // Defer SDK mount so DOM exists
+      setTimeout(() => mountPayPal(ppHost, tier.cta.plan, status), 0);
+    }
+    card.appendChild(ctaWrap);
 
     if (tier.tracing) {
       grid.appendChild(
         h(
           "div",
           { class: "tracing-border reveal" },
-          h("div", { class: "tracing-inner" }, ...card.children)
+          h("div", { class: "tracing-inner plan-card centered" }, ...card.children)
         )
       );
     } else {
