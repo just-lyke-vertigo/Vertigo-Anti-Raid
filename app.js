@@ -1,7 +1,3 @@
-/* ================= VERTIGO · Vanilla JS SPA =================
-   CHANGE THIS to your PythonAnywhere URL after deploy:
-   Example: https://vertigolyfe.pythonanywhere.com
-============================================================ */
 const API_BASE = "https://vertigolyfe.pythonanywhere.com";
 const API = API_BASE + "/api";
 
