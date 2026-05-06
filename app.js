@@ -6,7 +6,7 @@ const API_BASE = "https://vertigolyfe.pythonanywhere.com";
 const API = API_BASE + "/api";
 
 const CURRENCY_SYMBOL = "£";
-const VERSION = "2.4.0";
+const VERSION = "2.5.0";
 
 /* ================= CHANGELOG =================
    Add new entries at the TOP (newest first).
@@ -18,6 +18,28 @@ const VERSION = "2.4.0";
 */
 const CHANGELOG = [
   {
+    version: "2.5.0",
+    date: "2026-05-06",
+    title: "Monthly subscriptions, flashlight cursor, security pass",
+    changes: [
+      [
+        "added",
+        "PayPal billing is now a real recurring monthly subscription (cancel anytime, in-app)",
+      ],
+      ["added", "Persistent purple flashlight glow that follows the cursor"],
+      ["added", "Per-IP rate limit on /auth/login + /auth/signup (10 attempts / minute)"],
+      ["changed", "Mouse trail dots are larger, brighter, and have a stronger glow halo"],
+      [
+        "changed",
+        "Animated gradient now flows across the entire hero & section headlines, not just the highlighted span",
+      ],
+      ["changed", "'Recommended' pill now sits inside the Plus card where the eyebrow used to be"],
+      ["removed", "Eyebrow labels above plan cards (FREE / PLUS / PRO) and dashboard page titles"],
+      ["fixed", "Card Fields autofill no longer paints big white rectangles over the inputs"],
+      ["fixed", "Refuse to boot with the placeholder JWT_SECRET (logs an error so you notice)"],
+    ],
+  },
+  {
     version: "2.4.0",
     date: "2026-05-06",
     title: "Live PayPal + Card Fields, mouse trail, animated gradient",
@@ -25,10 +47,19 @@ const CHANGELOG = [
       ["added", "Real PayPal Smart Buttons + dark-themed Card Fields for credit/debit"],
       ["added", "Glowing cursor trail across the whole site (auto-disabled on touch)"],
       ["added", "Continuously shimmering gradient on hero/section accent text"],
-      ["changed", "Plus is now the highlighted (animated-border) tier; Pro returns to plain outline"],
+      [
+        "changed",
+        "Plus is now the highlighted (animated-border) tier; Pro returns to plain outline",
+      ],
       ["changed", "'Recommended' pill recoloured to purple to match changelog version badges"],
-      ["fixed", "Landing 'defending X servers' no longer drops to 0 after a DB wipe — last good Discord guild count is cached on disk"],
-      ["fixed", "PayPal checkout buttons load on the first click (SDK is now preloaded at app start)"],
+      [
+        "fixed",
+        "Landing 'defending X servers' no longer drops to 0 after a DB wipe — last good Discord guild count is cached on disk",
+      ],
+      [
+        "fixed",
+        "PayPal checkout buttons load on the first click (SDK is now preloaded at app start)",
+      ],
     ],
   },
   {
@@ -178,27 +209,60 @@ function setupReveals(root = document) {
   $$(".reveal", root).forEach((el) => revealObserver.observe(el));
 }
 
-/* -------- Mouse trail (glowing dots that follow the cursor) -------- */
+/* -------- Mouse trail + flashlight glow -------- */
 function initCursorTrail() {
-  // Skip on touch / coarse pointers — handled by CSS too, but bail early to save CPU
+  // Bail on touch / coarse pointers / reduced motion (CSS handles the rest)
   if (matchMedia("(hover: none), (pointer: coarse), (prefers-reduced-motion: reduce)").matches) {
     return;
   }
-  const MIN_DIST = 14; // only emit a dot when cursor moves at least this many px
-  const LIFE_MS = 700;
+  // Persistent flashlight halo that lives at the cursor.
+  const glow = document.createElement("div");
+  glow.className = "cursor-glow";
+  document.body.appendChild(glow);
+  let glowX = window.innerWidth / 2;
+  let glowY = window.innerHeight / 2;
+  let targetX = glowX;
+  let targetY = glowY;
+  let glowVisible = false;
+
+  // Smoothly follow the cursor using rAF (eased trail for the flashlight).
+  (function animateGlow() {
+    glowX += (targetX - glowX) * 0.18;
+    glowY += (targetY - glowY) * 0.18;
+    glow.style.transform = `translate3d(${glowX}px, ${glowY}px, 0)`;
+    requestAnimationFrame(animateGlow);
+  })();
+
+  const showGlow = () => {
+    if (!glowVisible) {
+      glow.classList.add("active");
+      glowVisible = true;
+    }
+  };
+  const hideGlow = () => {
+    glow.classList.remove("active");
+    glowVisible = false;
+  };
+
+  // Trail dots — independent of click state so they spawn forever on movement.
+  const MIN_DIST = 12;
+  const LIFE_MS = 850;
   let lastX = -999;
   let lastY = -999;
-  let last = 0;
+  let lastTime = 0;
+
   document.addEventListener(
     "mousemove",
     (e) => {
+      targetX = e.clientX;
+      targetY = e.clientY;
+      showGlow();
       const now = performance.now();
-      // Throttle to ~60fps + require some movement to avoid clumping
-      if (now - last < 12) return;
+      if (now - lastTime < 12) return;
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       if (dx * dx + dy * dy < MIN_DIST * MIN_DIST) return;
-      last = now;
+      lastTime = now;
       lastX = e.clientX;
       lastY = e.clientY;
       const dot = document.createElement("div");
@@ -206,12 +270,15 @@ function initCursorTrail() {
       dot.style.left = `${e.clientX}px`;
       dot.style.top = `${e.clientY}px`;
       document.body.appendChild(dot);
-      // Trigger fade on next frame so the transition runs
       requestAnimationFrame(() => dot.classList.add("fade"));
       setTimeout(() => dot.remove(), LIFE_MS);
     },
     { passive: true }
   );
+
+  // Hide the flashlight when cursor leaves the window
+  document.addEventListener("mouseleave", hideGlow);
+  document.addEventListener("mouseenter", showGlow);
 }
 
 /* -------- Icons (shared) -------- */
@@ -2362,38 +2429,49 @@ async function renderPricing() {
     container.innerHTML =
       '<div class="muted small center" style="padding:8px 0">Loading checkout…</div>';
 
-    const sharedHandlers = {
-      createOrder: async () => {
-        const order = await api("/payments/paypal/create-order", {
-          method: "POST",
-          body: { plan },
-        });
-        return order.id;
-      },
-      onApprove: async (data) => {
-        statusEl.textContent = "Activating…";
-        try {
-          await api(`/payments/paypal/capture/${data.orderID}`, { method: "POST" });
-          toast(`${PLAN_DISPLAY[plan]} activated!`, "success");
-          await loadUser();
-          location.hash = "#/dashboard";
-        } catch (err) {
-          toast(err.message || "Capture failed", "error");
-          statusEl.textContent = "";
-        }
-      },
-      onError: (err) => {
-        console.error("PayPal error", err);
-        toast("Payment failed — please try again", "error");
-        statusEl.textContent = "";
-      },
-      onCancel: () => {
-        statusEl.textContent = "";
-      },
+    // Pull plan IDs once (server auto-creates on first call).
+    const fetchPlanIds = async () => {
+      try {
+        return await api("/payments/paypal/plans");
+      } catch (err) {
+        return null;
+      }
     };
 
-    loadPaypalSdk()
-      .then((paypal) => {
+    Promise.all([loadPaypalSdk(), fetchPlanIds()])
+      .then(([paypal, plans]) => {
+        if (!plans || !plans[plan]) {
+          container.innerHTML =
+            '<p class="muted small center" style="padding:16px 0">Couldn\'t load subscription plans. Check backend logs.</p>';
+          return;
+        }
+        const sharedHandlers = {
+          createSubscription: (_data, actions) =>
+            actions.subscription.create({ plan_id: plans[plan] }),
+          onApprove: async (data) => {
+            statusEl.textContent = "Activating…";
+            try {
+              await api(`/payments/paypal/activate-subscription/${data.subscriptionID}`, {
+                method: "POST",
+              });
+              toast(`${PLAN_DISPLAY[plan]} subscription active!`, "success");
+              await loadUser();
+              location.hash = "#/dashboard";
+            } catch (err) {
+              toast(err.message || "Activation failed", "error");
+              statusEl.textContent = "";
+            }
+          },
+          onError: (err) => {
+            console.error("PayPal error", err);
+            toast("Payment failed — please try again", "error");
+            statusEl.textContent = "";
+          },
+          onCancel: () => {
+            statusEl.textContent = "";
+          },
+        };
+
         container.innerHTML = "";
 
         // -- 1. PayPal smart button (PayPal account flow) ----------------
@@ -2401,7 +2479,7 @@ async function renderPricing() {
         container.appendChild(ppBtnHost);
         paypal
           .Buttons({
-            style: { layout: "vertical", color: "blue", shape: "pill", label: "paypal" },
+            style: { layout: "vertical", color: "blue", shape: "pill", label: "subscribe" },
             fundingSource: paypal.FUNDING ? paypal.FUNDING.PAYPAL : undefined,
             ...sharedHandlers,
           })
@@ -2458,7 +2536,7 @@ async function renderPricing() {
             const payBtn = h(
               "button",
               { class: "btn-primary full center-text", type: "button" },
-              `Pay ${CURRENCY_SYMBOL}${plan === "plus" ? "2.99" : "9.99"}`
+              `Subscribe — ${CURRENCY_SYMBOL}${plan === "plus" ? "2.99" : "9.99"}/mo`
             );
             container.appendChild(divider);
             container.appendChild(form);
@@ -2467,21 +2545,26 @@ async function renderPricing() {
             const fieldStyle = {
               input: {
                 color: "#ffffff",
+                "background-color": "transparent",
                 "font-family": '"IBM Plex Sans", system-ui, sans-serif',
                 "font-size": "14px",
                 "font-weight": "400",
                 "letter-spacing": "0.01em",
               },
-              ":focus": { color: "#ffffff" },
+              "input:focus": { color: "#ffffff" },
+              "input:-webkit-autofill": {
+                color: "#ffffff",
+                "-webkit-text-fill-color": "#ffffff",
+                "-webkit-box-shadow": "0 0 0 1000px #0e0e12 inset",
+                transition: "background-color 9999s ease-out",
+              },
               ".invalid": { color: "#ef4444" },
               "::placeholder": { color: "#52525b" },
             };
             cardFields
               .NumberField({ style: fieldStyle, placeholder: "1234 1234 1234 1234" })
               .render(`#${numId}`);
-            cardFields
-              .ExpiryField({ style: fieldStyle, placeholder: "MM/YY" })
-              .render(`#${expId}`);
+            cardFields.ExpiryField({ style: fieldStyle, placeholder: "MM/YY" }).render(`#${expId}`);
             cardFields.CVVField({ style: fieldStyle, placeholder: "CVV" }).render(`#${cvvId}`);
             cardFields
               .NameField({ style: fieldStyle, placeholder: "Full name" })
@@ -2505,7 +2588,14 @@ async function renderPricing() {
         }
       })
       .catch((err) => {
-        container.innerHTML = `<p class="muted small center" style="padding:16px 0">${err.message}</p>`;
+        container.innerHTML = "";
+        container.appendChild(
+          h(
+            "p",
+            { class: "muted small center", style: "padding:16px 0" },
+            err && err.message ? String(err.message) : "Couldn't load checkout."
+          )
+        );
       });
   };
 
@@ -2513,7 +2603,9 @@ async function renderPricing() {
     const card = h("div", {
       class: `plan-card centered reveal ${tier.recommended ? "is-recommended" : ""}`,
     });
-    card.appendChild(h("div", { class: "label-eyebrow plan-eyebrow" }, tier.eyebrow));
+    if (tier.recommended) {
+      card.appendChild(h("span", { class: "plan-recommended-inline" }, "Recommended"));
+    }
     card.appendChild(
       h(
         "div",
@@ -2593,9 +2685,6 @@ async function renderPricing() {
         { class: "tracing-border reveal" },
         h("div", { class: "tracing-inner plan-card centered" }, ...card.children)
       );
-      if (tier.recommended) {
-        wrapper.appendChild(h("span", { class: "plan-recommended" }, "Recommended"));
-      }
       grid.appendChild(wrapper);
     } else {
       grid.appendChild(card);
