@@ -6,7 +6,7 @@ const API_BASE = "https://vertigolyfe.pythonanywhere.com";
 const API = API_BASE + "/api";
 
 const CURRENCY_SYMBOL = "£";
-const VERSION = "2.5.0";
+const VERSION = "2.5.2";
 
 /* ================= CHANGELOG =================
    Add new entries at the TOP (newest first).
@@ -17,6 +17,33 @@ const VERSION = "2.5.0";
      - fixed   (cyan)
 */
 const CHANGELOG = [
+  {
+    version: "2.5.2",
+    date: "2026-05-06",
+    title: "Dark card fields are back (subscription-aware)",
+    changes: [
+      ["added", "Custom dark credit/debit card form is back, now wired to recurring subscriptions"],
+      [
+        "changed",
+        "Card Fields gracefully no-ops if your PayPal merchant account doesn't have Advanced Card Processing approved — the standard PayPal hosted card button stays available either way",
+      ],
+    ],
+  },
+  {
+    version: "2.5.1",
+    date: "2026-05-06",
+    title: "Subscription SDK fix",
+    changes: [
+      [
+        "fixed",
+        "PayPal SDK now loads with intent=subscription + vault=true (was throwing 'SDK Token must be passed in for createSubscription')",
+      ],
+      [
+        "changed",
+        "Inline card payment now uses PayPal's hosted card popup (Card Fields requires PayPal Advanced Subscriptions, which most accounts don't have approved)",
+      ],
+    ],
+  },
   {
     version: "2.5.0",
     date: "2026-05-06",
@@ -334,7 +361,11 @@ async function loadConfig() {
   return state.config;
 }
 
-/** Lazy-load the PayPal JS SDK once. Returns the global `paypal` namespace. */
+/** Lazy-load the PayPal JS SDK once. Returns the global `paypal` namespace.
+ *  Loads with `intent=subscription` + `vault=true` for recurring billing, and
+ *  enables the `card-fields` component when the backend can mint a client-token
+ *  (required for Advanced Card Processing). Falls back to plain Smart Buttons
+ *  if Card Fields isn't available on this merchant account. */
 let _paypalSdkPromise = null;
 function loadPaypalSdk() {
   if (window.paypal) return Promise.resolve(window.paypal);
@@ -342,8 +373,7 @@ function loadPaypalSdk() {
   const cid = state.config?.paypal_client_id;
   if (!cid) return Promise.reject(new Error("PayPal not configured"));
   _paypalSdkPromise = (async () => {
-    // Try to fetch a client-token so we can enable Card Fields (dark card form).
-    // If it fails (sandbox/region restriction), we fall back to plain Smart Buttons.
+    // Try to mint a client-token. Required to enable Card Fields.
     let clientToken = null;
     try {
       const r = await fetch(API + "/payments/paypal/client-token", { method: "POST" });
@@ -352,7 +382,7 @@ function loadPaypalSdk() {
         clientToken = j.client_token || null;
       }
     } catch {
-      /* ignore */
+      /* ignore — fall back to plain Smart Buttons */
     }
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
@@ -360,11 +390,11 @@ function loadPaypalSdk() {
       const params = new URLSearchParams({
         "client-id": cid,
         currency: "GBP",
-        intent: "capture",
+        intent: "subscription",
+        vault: "true",
         components,
+        "enable-funding": "card",
       });
-      // When card-fields is unavailable, fall back to the PayPal-hosted card button
-      if (!clientToken) params.set("enable-funding", "card");
       script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
       if (clientToken) script.setAttribute("data-client-token", clientToken);
       script.onload = () => resolve(window.paypal);
@@ -2474,93 +2504,111 @@ async function renderPricing() {
 
         container.innerHTML = "";
 
-        // -- 1. PayPal smart button (PayPal account flow) ----------------
+        // -- 1. PayPal Smart Buttons (renders BOTH PayPal and Card buttons) -
         const ppBtnHost = h("div", { class: "pp-btn-host" });
         container.appendChild(ppBtnHost);
         paypal
           .Buttons({
             style: { layout: "vertical", color: "blue", shape: "pill", label: "subscribe" },
-            fundingSource: paypal.FUNDING ? paypal.FUNDING.PAYPAL : undefined,
             ...sharedHandlers,
           })
           .render(ppBtnHost)
           .catch((err) => console.error("PayPal button render", err));
 
-        // -- 2. Card Fields (dark custom form) when available ------------
+        // -- 2. Card Fields (dark custom card form) when available -------
+        // Requires PayPal Advanced Card Processing on the merchant account
+        // (paypal.CardFields will exist + isEligible() will return true).
+        // If unavailable, the code below silently skips and the user can
+        // still pay by card via PayPal's hosted popup from the buttons above.
         if (paypal.CardFields) {
-          const cardFields = paypal.CardFields(sharedHandlers);
-          if (!cardFields.isEligible || cardFields.isEligible()) {
-            const divider = h(
+          let cardFields;
+          try {
+            cardFields = paypal.CardFields({
+              ...sharedHandlers,
+              // CardFields uses `createVaultSetupToken` for subscription flow,
+              // but the simpler `createSubscription` works on accounts where
+              // Advanced Subscriptions is enabled. We pass the same handler.
+            });
+          } catch (err) {
+            console.warn("CardFields init failed, falling back to hosted card button:", err);
+            return;
+          }
+          if (cardFields.isEligible && !cardFields.isEligible()) {
+            // Account isn't approved for Advanced Card Processing — bail.
+            return;
+          }
+          const divider = h(
+            "div",
+            { class: "or-divider" },
+            h("span", { class: "or-divider-line" }),
+            h("span", { class: "or-divider-text" }, "OR PAY WITH CARD"),
+            h("span", { class: "or-divider-line" })
+          );
+          const numId = `cf-num-${plan}`;
+          const expId = `cf-exp-${plan}`;
+          const cvvId = `cf-cvv-${plan}`;
+          const nameId = `cf-name-${plan}`;
+          const form = h(
+            "div",
+            { class: "card-form" },
+            h(
+              "label",
+              { class: "card-label" },
+              "Card number",
+              h("div", { id: numId, class: "card-input" })
+            ),
+            h(
               "div",
-              { class: "or-divider" },
-              h("span", { class: "or-divider-line" }),
-              h("span", { class: "or-divider-text" }, "OR PAY WITH CARD"),
-              h("span", { class: "or-divider-line" })
-            );
-            const numId = `cf-num-${plan}`;
-            const expId = `cf-exp-${plan}`;
-            const cvvId = `cf-cvv-${plan}`;
-            const nameId = `cf-name-${plan}`;
-            const form = h(
-              "div",
-              { class: "card-form" },
+              { class: "card-row-2" },
               h(
                 "label",
                 { class: "card-label" },
-                "Card number",
-                h("div", { id: numId, class: "card-input" })
-              ),
-              h(
-                "div",
-                { class: "card-row-2" },
-                h(
-                  "label",
-                  { class: "card-label" },
-                  "Expiry",
-                  h("div", { id: expId, class: "card-input" })
-                ),
-                h(
-                  "label",
-                  { class: "card-label" },
-                  "CVV",
-                  h("div", { id: cvvId, class: "card-input" })
-                )
+                "Expiry",
+                h("div", { id: expId, class: "card-input" })
               ),
               h(
                 "label",
                 { class: "card-label" },
-                "Name on card",
-                h("div", { id: nameId, class: "card-input" })
+                "CVV",
+                h("div", { id: cvvId, class: "card-input" })
               )
-            );
-            const payBtn = h(
-              "button",
-              { class: "btn-primary full center-text", type: "button" },
-              `Subscribe — ${CURRENCY_SYMBOL}${plan === "plus" ? "2.99" : "9.99"}/mo`
-            );
-            container.appendChild(divider);
-            container.appendChild(form);
-            container.appendChild(payBtn);
+            ),
+            h(
+              "label",
+              { class: "card-label" },
+              "Name on card",
+              h("div", { id: nameId, class: "card-input" })
+            )
+          );
+          const payBtn = h(
+            "button",
+            { class: "btn-primary full center-text", type: "button" },
+            `Subscribe — ${CURRENCY_SYMBOL}${plan === "plus" ? "2.99" : "9.99"}/mo`
+          );
+          container.appendChild(divider);
+          container.appendChild(form);
+          container.appendChild(payBtn);
 
-            const fieldStyle = {
-              input: {
-                color: "#ffffff",
-                "background-color": "transparent",
-                "font-family": '"IBM Plex Sans", system-ui, sans-serif',
-                "font-size": "14px",
-                "font-weight": "400",
-                "letter-spacing": "0.01em",
-              },
-              "input:focus": { color: "#ffffff" },
-              "input:-webkit-autofill": {
-                color: "#ffffff",
-                "-webkit-text-fill-color": "#ffffff",
-                "-webkit-box-shadow": "0 0 0 1000px #0e0e12 inset",
-                transition: "background-color 9999s ease-out",
-              },
-              ".invalid": { color: "#ef4444" },
-              "::placeholder": { color: "#52525b" },
-            };
+          const fieldStyle = {
+            input: {
+              color: "#ffffff",
+              "background-color": "transparent",
+              "font-family": '"IBM Plex Sans", system-ui, sans-serif',
+              "font-size": "14px",
+              "font-weight": "400",
+              "letter-spacing": "0.01em",
+            },
+            "input:focus": { color: "#ffffff" },
+            "input:-webkit-autofill": {
+              color: "#ffffff",
+              "-webkit-text-fill-color": "#ffffff",
+              "-webkit-box-shadow": "0 0 0 1000px #0e0e12 inset",
+              transition: "background-color 9999s ease-out",
+            },
+            ".invalid": { color: "#ef4444" },
+            "::placeholder": { color: "#52525b" },
+          };
+          try {
             cardFields
               .NumberField({ style: fieldStyle, placeholder: "1234 1234 1234 1234" })
               .render(`#${numId}`);
@@ -2569,22 +2617,28 @@ async function renderPricing() {
             cardFields
               .NameField({ style: fieldStyle, placeholder: "Full name" })
               .render(`#${nameId}`);
-
-            payBtn.addEventListener("click", async () => {
-              payBtn.disabled = true;
-              const original = payBtn.textContent;
-              payBtn.textContent = "Processing…";
-              statusEl.textContent = "";
-              try {
-                await cardFields.submit();
-              } catch (err) {
-                console.error("CardFields submit", err);
-                toast(err?.message || "Card payment failed", "error");
-                payBtn.disabled = false;
-                payBtn.textContent = original;
-              }
-            });
+          } catch (err) {
+            console.warn("CardFields render failed:", err);
+            divider.remove();
+            form.remove();
+            payBtn.remove();
+            return;
           }
+
+          payBtn.addEventListener("click", async () => {
+            payBtn.disabled = true;
+            const original = payBtn.textContent;
+            payBtn.textContent = "Processing…";
+            statusEl.textContent = "";
+            try {
+              await cardFields.submit();
+            } catch (err) {
+              console.error("CardFields submit", err);
+              toast(err?.message || "Card payment failed", "error");
+              payBtn.disabled = false;
+              payBtn.textContent = original;
+            }
+          });
         }
       })
       .catch((err) => {
