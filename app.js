@@ -1,8 +1,12 @@
+/* ================= VERTIGO · Vanilla JS SPA =================
+   CHANGE THIS to your PythonAnywhere URL after deploy:
+   Example: https://vertigolyfe.pythonanywhere.com
+============================================================ */
 const API_BASE = "https://vertigolyfe.pythonanywhere.com";
 const API = API_BASE + "/api";
 
 const CURRENCY_SYMBOL = "£";
-const VERSION = "2.2.0";
+const VERSION = "2.4.0";
 
 /* ================= CHANGELOG =================
    Add new entries at the TOP (newest first).
@@ -13,6 +17,20 @@ const VERSION = "2.2.0";
      - fixed   (cyan)
 */
 const CHANGELOG = [
+  {
+    version: "2.4.0",
+    date: "2026-05-06",
+    title: "Live PayPal + Card Fields, mouse trail, animated gradient",
+    changes: [
+      ["added", "Real PayPal Smart Buttons + dark-themed Card Fields for credit/debit"],
+      ["added", "Glowing cursor trail across the whole site (auto-disabled on touch)"],
+      ["added", "Continuously shimmering gradient on hero/section accent text"],
+      ["changed", "Plus is now the highlighted (animated-border) tier; Pro returns to plain outline"],
+      ["changed", "'Recommended' pill recoloured to purple to match changelog version badges"],
+      ["fixed", "Landing 'defending X servers' no longer drops to 0 after a DB wipe — last good Discord guild count is cached on disk"],
+      ["fixed", "PayPal checkout buttons load on the first click (SDK is now preloaded at app start)"],
+    ],
+  },
   {
     version: "2.2.0",
     date: "2026-05-03",
@@ -160,6 +178,42 @@ function setupReveals(root = document) {
   $$(".reveal", root).forEach((el) => revealObserver.observe(el));
 }
 
+/* -------- Mouse trail (glowing dots that follow the cursor) -------- */
+function initCursorTrail() {
+  // Skip on touch / coarse pointers — handled by CSS too, but bail early to save CPU
+  if (matchMedia("(hover: none), (pointer: coarse), (prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
+  const MIN_DIST = 14; // only emit a dot when cursor moves at least this many px
+  const LIFE_MS = 700;
+  let lastX = -999;
+  let lastY = -999;
+  let last = 0;
+  document.addEventListener(
+    "mousemove",
+    (e) => {
+      const now = performance.now();
+      // Throttle to ~60fps + require some movement to avoid clumping
+      if (now - last < 12) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      if (dx * dx + dy * dy < MIN_DIST * MIN_DIST) return;
+      last = now;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const dot = document.createElement("div");
+      dot.className = "cursor-dot";
+      dot.style.left = `${e.clientX}px`;
+      dot.style.top = `${e.clientY}px`;
+      document.body.appendChild(dot);
+      // Trigger fade on next frame so the transition runs
+      requestAnimationFrame(() => dot.classList.add("fade"));
+      setTimeout(() => dot.remove(), LIFE_MS);
+    },
+    { passive: true }
+  );
+}
+
 /* -------- Icons (shared) -------- */
 const ICON = {
   shield:
@@ -220,18 +274,40 @@ function loadPaypalSdk() {
   if (_paypalSdkPromise) return _paypalSdkPromise;
   const cid = state.config?.paypal_client_id;
   if (!cid) return Promise.reject(new Error("PayPal not configured"));
-  _paypalSdkPromise = new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(
-      cid
-    )}&currency=GBP&intent=capture&components=buttons&enable-funding=card`;
-    s.onload = () => resolve(window.paypal);
-    s.onerror = () => {
-      _paypalSdkPromise = null;
-      reject(new Error("Failed to load PayPal SDK"));
-    };
-    document.head.appendChild(s);
-  });
+  _paypalSdkPromise = (async () => {
+    // Try to fetch a client-token so we can enable Card Fields (dark card form).
+    // If it fails (sandbox/region restriction), we fall back to plain Smart Buttons.
+    let clientToken = null;
+    try {
+      const r = await fetch(API + "/payments/paypal/client-token", { method: "POST" });
+      if (r.ok) {
+        const j = await r.json();
+        clientToken = j.client_token || null;
+      }
+    } catch {
+      /* ignore */
+    }
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      const components = clientToken ? "buttons,card-fields" : "buttons";
+      const params = new URLSearchParams({
+        "client-id": cid,
+        currency: "GBP",
+        intent: "capture",
+        components,
+      });
+      // When card-fields is unavailable, fall back to the PayPal-hosted card button
+      if (!clientToken) params.set("enable-funding", "card");
+      script.src = `https://www.paypal.com/sdk/js?${params.toString()}`;
+      if (clientToken) script.setAttribute("data-client-token", clientToken);
+      script.onload = () => resolve(window.paypal);
+      script.onerror = () => {
+        _paypalSdkPromise = null;
+        reject(new Error("Failed to load PayPal SDK"));
+      };
+      document.head.appendChild(script);
+    });
+  })();
   return _paypalSdkPromise;
 }
 
@@ -2203,6 +2279,7 @@ async function renderPricing() {
         "Priority support queue",
       ],
       cta: { plan: "plus" },
+      tracing: true,
     },
     {
       key: "pro",
@@ -2222,7 +2299,6 @@ async function renderPricing() {
         "Priority 24/7 support",
       ],
       cta: { plan: "pro" },
-      tracing: true,
     },
   ];
 
@@ -2254,7 +2330,7 @@ async function renderPricing() {
   body.appendChild(inner);
   wrap.appendChild(body);
 
-  /** Mounts a real PayPal smart button + card button into the given container. */
+  /** Mounts a real PayPal smart button + (optional) dark Card Fields form. */
   const mountPayPal = (container, plan, statusEl) => {
     if (!state.config?.paypal_configured) {
       container.innerHTML = "";
@@ -2285,46 +2361,148 @@ async function renderPricing() {
     }
     container.innerHTML =
       '<div class="muted small center" style="padding:8px 0">Loading checkout…</div>';
+
+    const sharedHandlers = {
+      createOrder: async () => {
+        const order = await api("/payments/paypal/create-order", {
+          method: "POST",
+          body: { plan },
+        });
+        return order.id;
+      },
+      onApprove: async (data) => {
+        statusEl.textContent = "Activating…";
+        try {
+          await api(`/payments/paypal/capture/${data.orderID}`, { method: "POST" });
+          toast(`${PLAN_DISPLAY[plan]} activated!`, "success");
+          await loadUser();
+          location.hash = "#/dashboard";
+        } catch (err) {
+          toast(err.message || "Capture failed", "error");
+          statusEl.textContent = "";
+        }
+      },
+      onError: (err) => {
+        console.error("PayPal error", err);
+        toast("Payment failed — please try again", "error");
+        statusEl.textContent = "";
+      },
+      onCancel: () => {
+        statusEl.textContent = "";
+      },
+    };
+
     loadPaypalSdk()
       .then((paypal) => {
         container.innerHTML = "";
+
+        // -- 1. PayPal smart button (PayPal account flow) ----------------
+        const ppBtnHost = h("div", { class: "pp-btn-host" });
+        container.appendChild(ppBtnHost);
         paypal
           .Buttons({
             style: { layout: "vertical", color: "blue", shape: "pill", label: "paypal" },
-            createOrder: async () => {
-              const order = await api("/payments/paypal/create-order", {
-                method: "POST",
-                body: { plan },
-              });
-              return order.id;
-            },
-            onApprove: async (data) => {
-              statusEl.textContent = "Activating…";
-              try {
-                await api(`/payments/paypal/capture/${data.orderID}`, { method: "POST" });
-                toast(`${PLAN_DISPLAY[plan]} activated!`, "success");
-                await loadUser();
-                location.hash = "#/dashboard";
-              } catch (err) {
-                toast(err.message || "Capture failed", "error");
-                statusEl.textContent = "";
-              }
-            },
-            onError: (err) => {
-              console.error("PayPal error", err);
-              toast("Payment failed — please try again", "error");
-              statusEl.textContent = "";
-            },
-            onCancel: () => {
-              statusEl.textContent = "";
-            },
+            fundingSource: paypal.FUNDING ? paypal.FUNDING.PAYPAL : undefined,
+            ...sharedHandlers,
           })
-          .render(container)
-          .catch((err) => {
-            console.error("PayPal render error", err);
-            container.innerHTML =
-              '<p class="muted small center" style="padding:16px 0">Couldn\'t load PayPal. Refresh and try again.</p>';
-          });
+          .render(ppBtnHost)
+          .catch((err) => console.error("PayPal button render", err));
+
+        // -- 2. Card Fields (dark custom form) when available ------------
+        if (paypal.CardFields) {
+          const cardFields = paypal.CardFields(sharedHandlers);
+          if (!cardFields.isEligible || cardFields.isEligible()) {
+            const divider = h(
+              "div",
+              { class: "or-divider" },
+              h("span", { class: "or-divider-line" }),
+              h("span", { class: "or-divider-text" }, "OR PAY WITH CARD"),
+              h("span", { class: "or-divider-line" })
+            );
+            const numId = `cf-num-${plan}`;
+            const expId = `cf-exp-${plan}`;
+            const cvvId = `cf-cvv-${plan}`;
+            const nameId = `cf-name-${plan}`;
+            const form = h(
+              "div",
+              { class: "card-form" },
+              h(
+                "label",
+                { class: "card-label" },
+                "Card number",
+                h("div", { id: numId, class: "card-input" })
+              ),
+              h(
+                "div",
+                { class: "card-row-2" },
+                h(
+                  "label",
+                  { class: "card-label" },
+                  "Expiry",
+                  h("div", { id: expId, class: "card-input" })
+                ),
+                h(
+                  "label",
+                  { class: "card-label" },
+                  "CVV",
+                  h("div", { id: cvvId, class: "card-input" })
+                )
+              ),
+              h(
+                "label",
+                { class: "card-label" },
+                "Name on card",
+                h("div", { id: nameId, class: "card-input" })
+              )
+            );
+            const payBtn = h(
+              "button",
+              { class: "btn-primary full center-text", type: "button" },
+              `Pay ${CURRENCY_SYMBOL}${plan === "plus" ? "2.99" : "9.99"}`
+            );
+            container.appendChild(divider);
+            container.appendChild(form);
+            container.appendChild(payBtn);
+
+            const fieldStyle = {
+              input: {
+                color: "#ffffff",
+                "font-family": '"IBM Plex Sans", system-ui, sans-serif',
+                "font-size": "14px",
+                "font-weight": "400",
+                "letter-spacing": "0.01em",
+              },
+              ":focus": { color: "#ffffff" },
+              ".invalid": { color: "#ef4444" },
+              "::placeholder": { color: "#52525b" },
+            };
+            cardFields
+              .NumberField({ style: fieldStyle, placeholder: "1234 1234 1234 1234" })
+              .render(`#${numId}`);
+            cardFields
+              .ExpiryField({ style: fieldStyle, placeholder: "MM/YY" })
+              .render(`#${expId}`);
+            cardFields.CVVField({ style: fieldStyle, placeholder: "CVV" }).render(`#${cvvId}`);
+            cardFields
+              .NameField({ style: fieldStyle, placeholder: "Full name" })
+              .render(`#${nameId}`);
+
+            payBtn.addEventListener("click", async () => {
+              payBtn.disabled = true;
+              const original = payBtn.textContent;
+              payBtn.textContent = "Processing…";
+              statusEl.textContent = "";
+              try {
+                await cardFields.submit();
+              } catch (err) {
+                console.error("CardFields submit", err);
+                toast(err?.message || "Card payment failed", "error");
+                payBtn.disabled = false;
+                payBtn.textContent = original;
+              }
+            });
+          }
+        }
       })
       .catch((err) => {
         container.innerHTML = `<p class="muted small center" style="padding:16px 0">${err.message}</p>`;
@@ -2335,9 +2513,6 @@ async function renderPricing() {
     const card = h("div", {
       class: `plan-card centered reveal ${tier.recommended ? "is-recommended" : ""}`,
     });
-    if (tier.recommended) {
-      card.appendChild(h("span", { class: "plan-recommended" }, "Recommended"));
-    }
     card.appendChild(h("div", { class: "label-eyebrow plan-eyebrow" }, tier.eyebrow));
     card.appendChild(
       h(
@@ -2413,13 +2588,15 @@ async function renderPricing() {
     card.appendChild(ctaWrap);
 
     if (tier.tracing) {
-      grid.appendChild(
-        h(
-          "div",
-          { class: "tracing-border reveal" },
-          h("div", { class: "tracing-inner plan-card centered" }, ...card.children)
-        )
+      const wrapper = h(
+        "div",
+        { class: "tracing-border reveal" },
+        h("div", { class: "tracing-inner plan-card centered" }, ...card.children)
       );
+      if (tier.recommended) {
+        wrapper.appendChild(h("span", { class: "plan-recommended" }, "Recommended"));
+      }
+      grid.appendChild(wrapper);
     } else {
       grid.appendChild(card);
     }
@@ -2454,8 +2631,12 @@ async function handleDiscordCallback() {
 
 /* -------- Init -------- */
 (async function init() {
+  initCursorTrail();
   // Load Discord client_id so invite buttons work on mobile
   await loadConfig();
+  // Preload PayPal SDK in the background so the first click on a checkout button
+  // is instant. Failure is fine — we'll surface it on the pricing page if needed.
+  if (state.config?.paypal_configured) loadPaypalSdk().catch(() => {});
   await loadUser();
   if (state.user) await loadServers();
   const wasCb = await handleDiscordCallback();
