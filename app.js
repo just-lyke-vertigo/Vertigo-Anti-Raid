@@ -6,7 +6,7 @@ const API_BASE = "https://vertigolyfe.pythonanywhere.com";
 const API = API_BASE + "/api";
 
 const CURRENCY_SYMBOL = "£";
-const VERSION = "2.6.0";
+const VERSION = "2.6.1";
 
 /* ================= CHANGELOG =================
    Add new entries at the TOP (newest first).
@@ -17,6 +17,33 @@ const VERSION = "2.6.0";
      - fixed   (cyan)
 */
 const CHANGELOG = [
+  {
+    version: "2.6.1",
+    date: "2026-05-06",
+    title: "Sticky sidebar, smoother trail, baseline alignment",
+    changes: [
+      [
+        "fixed",
+        "Dashboard: sidebar (logo, nav, profile, upgrade card) now stays pinned. Only the content area scrolls.",
+      ],
+      [
+        "fixed",
+        "Mouse trail is now a continuous ribbon — interpolates dots between mousemove events so slow movement still draws a smooth line",
+      ],
+      [
+        "changed",
+        "Trail and flashlight opacity reduced; flashlight halo trimmed from 320px → 260px",
+      ],
+      [
+        "fixed",
+        "Changelog 'ADDED / CHANGED / FIXED' tags + bullet now share the same baseline as the body text",
+      ],
+      [
+        "changed",
+        "Hero & section gradient now animates line-by-line (each line has its own staggered shimmer) instead of one band sweeping the whole block",
+      ],
+    ],
+  },
   {
     version: "2.6.0",
     date: "2026-05-06",
@@ -294,12 +321,24 @@ function initCursorTrail() {
     glowVisible = false;
   };
 
-  // Trail dots — independent of click state so they spawn forever on movement.
-  const MIN_DIST = 4; // emit a particle for every ~4px the cursor moves
-  const LIFE_MS = 1000;
-  let lastX = -999;
-  let lastY = -999;
-  let lastTime = 0;
+  // Trail dots — spawn along the path on every mousemove. When the gap
+  // between two events is large (slow mousemove frequency on some
+  // systems), we INTERPOLATE dots between the last point and the current
+  // point so the ribbon stays continuous instead of leaving gaps.
+  const STEP = 8; // distance between trail dots, in px
+  const LIFE_MS = 900;
+  let lastX = null;
+  let lastY = null;
+
+  const spawnDot = (x, y) => {
+    const dot = document.createElement("div");
+    dot.className = "cursor-dot";
+    dot.style.left = `${x}px`;
+    dot.style.top = `${y}px`;
+    document.body.appendChild(dot);
+    requestAnimationFrame(() => dot.classList.add("fade"));
+    setTimeout(() => dot.remove(), LIFE_MS);
+  };
 
   document.addEventListener(
     "mousemove",
@@ -307,22 +346,26 @@ function initCursorTrail() {
       targetX = e.clientX;
       targetY = e.clientY;
       showGlow();
-      const now = performance.now();
-      // Throttle spawn rate to ~120 dots/sec max — plenty for a smooth ribbon
-      if (now - lastTime < 8) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      if (dx * dx + dy * dy < MIN_DIST * MIN_DIST) return;
-      lastTime = now;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      const dot = document.createElement("div");
-      dot.className = "cursor-dot";
-      dot.style.left = `${e.clientX}px`;
-      dot.style.top = `${e.clientY}px`;
-      document.body.appendChild(dot);
-      requestAnimationFrame(() => dot.classList.add("fade"));
-      setTimeout(() => dot.remove(), LIFE_MS);
+      const x = e.clientX;
+      const y = e.clientY;
+      if (lastX === null) {
+        spawnDot(x, y);
+        lastX = x;
+        lastY = y;
+        return;
+      }
+      // Walk along the segment from (lastX, lastY) → (x, y) in STEP-px steps
+      const dx = x - lastX;
+      const dy = y - lastY;
+      const dist = Math.hypot(dx, dy);
+      if (dist < STEP) return; // too small to bother
+      const steps = Math.min(40, Math.floor(dist / STEP));
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        spawnDot(lastX + dx * t, lastY + dy * t);
+      }
+      lastX = x;
+      lastY = y;
     },
     { passive: true }
   );
