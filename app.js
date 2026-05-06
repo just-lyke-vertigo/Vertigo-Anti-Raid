@@ -6,7 +6,7 @@ const API_BASE = "https://vertigolyfe.pythonanywhere.com";
 const API = API_BASE + "/api";
 
 const CURRENCY_SYMBOL = "£";
-const VERSION = "2.5.2";
+const VERSION = "2.6.0";
 
 /* ================= CHANGELOG =================
    Add new entries at the TOP (newest first).
@@ -17,6 +17,29 @@ const VERSION = "2.5.2";
      - fixed   (cyan)
 */
 const CHANGELOG = [
+  {
+    version: "2.6.0",
+    date: "2026-05-06",
+    title: "Manage subscription, polished pricing, smoother trail",
+    changes: [
+      [
+        "added",
+        "Manage Subscription card on Settings — see your plan, billing date, and cancel in-app",
+      ],
+      [
+        "changed",
+        "Mouse trail is now denser (a real ribbon instead of dots once a second), recoloured cyan to match the Plus card stroke",
+      ],
+      ["changed", "'Recommended' pill recoloured to the same cyan as the Plus card stroke"],
+      ["changed", "Flashlight glow is slightly smaller and now cyan-tinted"],
+      [
+        "changed",
+        "Plan card titles + prices are vertically aligned across all 3 tiers (invisible spacer on Free + Pro)",
+      ],
+      ["changed", "PayPal subscribe button height matches the Use Free button (44px)"],
+      ["fixed", "Animated text gradient now loops seamlessly with no jitter or snap"],
+    ],
+  },
   {
     version: "2.5.2",
     date: "2026-05-06",
@@ -272,8 +295,8 @@ function initCursorTrail() {
   };
 
   // Trail dots — independent of click state so they spawn forever on movement.
-  const MIN_DIST = 12;
-  const LIFE_MS = 850;
+  const MIN_DIST = 4; // emit a particle for every ~4px the cursor moves
+  const LIFE_MS = 1000;
   let lastX = -999;
   let lastY = -999;
   let lastTime = 0;
@@ -285,7 +308,8 @@ function initCursorTrail() {
       targetY = e.clientY;
       showGlow();
       const now = performance.now();
-      if (now - lastTime < 12) return;
+      // Throttle spawn rate to ~120 dots/sec max — plenty for a smooth ribbon
+      if (now - lastTime < 8) return;
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       if (dx * dx + dy * dy < MIN_DIST * MIN_DIST) return;
@@ -2267,42 +2291,101 @@ function renderSettings(root) {
         : ""
     )
   );
-  root.appendChild(
+  // ---- Subscription card -------------------------------------------------
+  const planNames = { plus: "Vertigo Plus", pro: "Vertigo Pro" };
+  const planPrices = { plus: "£2.99/mo", pro: "£9.99/mo" };
+  const isPaid = !!u?.premium_tier && u?.plan;
+  const subCard = h("div", { class: "section-card reveal" });
+  subCard.appendChild(
     h(
-      "div",
-      { class: "section-card reveal" },
-      h(
-        "div",
-        {
-          style:
-            "display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px",
-        },
-        h(
-          "div",
-          {},
-          h(
-            "h3",
-            {
-              style:
-                "font-family:Outfit;font-size:18px;font-weight:500;display:flex;align-items:center;gap:8px",
-            },
-            h("span", { html: ICON.crown, style: "color:#F59E0B" }),
-            " Subscription"
-          ),
-          h(
-            "p",
-            { class: "muted", style: "font-size:14px;margin-top:4px" },
-            u?.premium_tier ? "You're on Vertigo Pro." : "Free plan."
-          )
-        ),
-        h(
-          "a",
-          { href: "#/pricing", class: "btn-primary btn-sm" },
-          u?.premium_tier ? "Manage" : "Upgrade"
-        )
-      )
+      "h3",
+      {
+        style:
+          "font-family:Outfit;font-size:18px;font-weight:500;display:flex;align-items:center;gap:8px;margin-bottom:8px",
+      },
+      h("span", { html: ICON.crown, style: "color:#F59E0B" }),
+      "Subscription"
     )
   );
+  subCard.appendChild(
+    h(
+      "p",
+      { class: "muted", style: "font-size:14px;margin-bottom:20px" },
+      isPaid
+        ? `You're subscribed to ${planNames[u.plan] || "Premium"} — billed monthly until cancelled.`
+        : "You're on the free plan. Upgrade for more backups, alerts, and protected servers."
+    )
+  );
+  subCard.appendChild(
+    h(
+      "div",
+      { class: "setting-row" },
+      h("span", { class: "muted" }, "Plan"),
+      h("span", { class: "val" }, isPaid ? planNames[u.plan] : "Vertigo Free")
+    )
+  );
+  if (isPaid) {
+    subCard.appendChild(
+      h(
+        "div",
+        { class: "setting-row" },
+        h("span", { class: "muted" }, "Price"),
+        h("span", { class: "val" }, planPrices[u.plan] || "—")
+      )
+    );
+    subCard.appendChild(
+      h(
+        "div",
+        { class: "setting-row" },
+        h("span", { class: "muted" }, "Started"),
+        h(
+          "span",
+          { class: "val" },
+          u.premium_activated_at ? new Date(u.premium_activated_at).toLocaleDateString() : "—"
+        )
+      )
+    );
+  }
+  const subActions = h("div", {
+    style: "display:flex;gap:12px;flex-wrap:wrap;margin-top:20px",
+  });
+  if (isPaid) {
+    // Switch tier
+    if (u.plan !== "pro") {
+      subActions.appendChild(
+        h("a", { href: "#/pricing", class: "btn-ghost btn-sm" }, "Switch to Pro")
+      );
+    }
+    // Cancel
+    const cancelBtn = h(
+      "button",
+      { class: "btn-danger btn-sm", type: "button" },
+      "Cancel subscription"
+    );
+    cancelBtn.addEventListener("click", async () => {
+      const ok = confirm(
+        "Cancel your subscription? You'll keep premium until the end of the current billing period."
+      );
+      if (!ok) return;
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = "Cancelling…";
+      try {
+        await api("/payments/paypal/cancel-subscription", { method: "POST" });
+        toast("Subscription cancelled", "success");
+        await loadUser();
+        router(); // re-render settings
+      } catch (err) {
+        toast(err.message || "Cancel failed", "error");
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = "Cancel subscription";
+      }
+    });
+    subActions.appendChild(cancelBtn);
+  } else {
+    subActions.appendChild(h("a", { href: "#/pricing", class: "btn-primary btn-sm" }, "Upgrade"));
+  }
+  subCard.appendChild(subActions);
+  root.appendChild(subCard);
 }
 
 /* -------- PRICING (3 tiers: Free / Plus / Pro in GBP) -------- */
@@ -2509,7 +2592,15 @@ async function renderPricing() {
         container.appendChild(ppBtnHost);
         paypal
           .Buttons({
-            style: { layout: "vertical", color: "blue", shape: "pill", label: "subscribe" },
+            // Match the height of our btn-primary (~44px) and use pill shape
+            // so the "Subscribe" CTA visually mirrors the "Use Free" button.
+            style: {
+              layout: "vertical",
+              color: "blue",
+              shape: "pill",
+              label: "subscribe",
+              height: 44,
+            },
             ...sharedHandlers,
           })
           .render(ppBtnHost)
@@ -2659,6 +2750,9 @@ async function renderPricing() {
     });
     if (tier.recommended) {
       card.appendChild(h("span", { class: "plan-recommended-inline" }, "Recommended"));
+    } else {
+      // Invisible placeholder so all 3 cards' titles + prices line up vertically
+      card.appendChild(h("span", { class: "plan-recommended-spacer", "aria-hidden": "true" }));
     }
     card.appendChild(
       h(
