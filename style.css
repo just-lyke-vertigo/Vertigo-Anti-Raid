@@ -205,6 +205,31 @@ textarea {
   }
 }
 
+/* When we want EACH LINE of a heading to animate its own gradient (so the
+   shimmer reads line-by-line instead of sweeping across the whole block
+   at once), wrap each line in `<span class="line">`. */
+.multiline-gradient {
+  display: flex;
+  flex-direction: column;
+}
+.multiline-gradient .line {
+  display: inline-block;
+  background-image: linear-gradient(100deg, #ffffff 0%, #5865f2 25%, #ffffff 50%, #5865f2 75%, #ffffff 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: gradient-shimmer 6s linear infinite;
+  animation-delay: var(--d, 0s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .multiline-gradient .line {
+    animation: none;
+    background-position: 50% 0;
+  }
+}
+
 /* Buttons */
 .btn-primary {
   background: var(--primary);
@@ -882,10 +907,18 @@ textarea {
   color: var(--primary);
 }
 
-/* ================= DASHBOARD SHELL ================= */
+/* ================= DASHBOARD SHELL =================
+   Layout goals:
+   - Sidebar is fixed-height (100dvh) and never scrolls with the content.
+   - Profile card + upgrade CTA stay pinned at the bottom of the sidebar.
+   - ONLY the main content area scrolls. The main bar (breadcrumb / Add server
+     button) sits at the top of that scroll container and stays visible via
+     `position: sticky; top: 0` while the user scrolls. */
 .app-shell {
-  min-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   display: flex;
+  overflow: hidden;
 }
 .sidebar {
   width: 256px;
@@ -894,6 +927,13 @@ textarea {
   background: #0c0c0e;
   display: flex;
   flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+.sidebar-nav {
+  overflow-y: auto;
+  /* Only the nav list itself scrolls if there are too many items — brand,
+     server picker and foot stay pinned. */
 }
 .sidebar-brand {
   padding: 20px;
@@ -980,10 +1020,19 @@ textarea {
 }
 .sidebar-nav {
   flex: 1;
+  min-height: 0;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+}
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #1b1b20;
+  border-radius: 3px;
 }
 .nav-item {
   display: flex;
@@ -1092,13 +1141,18 @@ textarea {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* Main */
+/* Main — independent scroll container so sidebar stays pinned. */
 .main {
   flex: 1;
   min-width: 0;
+  height: 100dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 .main-bar {
   height: 56px;
+  flex-shrink: 0;
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -1106,6 +1160,10 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 30;
+  background: rgba(10, 10, 12, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
 }
 .crumbs {
   font-size: 14px;
@@ -2142,16 +2200,23 @@ textarea {
   font-size: 14px;
   color: var(--txt2);
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   gap: 10px;
+  line-height: 1.55;
 }
 .changelog-changes li::before {
   content: "";
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 9px;
+  align-self: center;
+  margin-top: 0;
+}
+.changelog-changes li > span:first-of-type {
+  /* The 'added' / 'changed' / 'fixed' tag — keep it vertically centered
+     with the body text even though its font-size is smaller. */
+  align-self: baseline;
 }
 .changelog-changes li.added::before {
   background: #10b981;
@@ -2242,6 +2307,12 @@ textarea {
   /* Dashboard: stack sidebar -> top bar with drawer */
   .app-shell {
     flex-direction: column;
+    height: 100dvh;
+  }
+  .main {
+    height: auto;
+    flex: 1;
+    min-height: 0;
   }
   .sidebar {
     position: fixed;
@@ -2443,18 +2514,18 @@ textarea {
   position: fixed;
   top: 0;
   left: 0;
-  width: 320px;
-  height: 320px;
-  margin-left: -160px;
-  margin-top: -160px;
+  width: 260px;
+  height: 260px;
+  margin-left: -130px;
+  margin-top: -130px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9998;
   background: radial-gradient(
     circle at center,
-    rgba(168, 222, 255, 0.18) 0%,
-    rgba(34, 211, 238, 0.11) 30%,
-    rgba(34, 211, 238, 0.05) 50%,
+    rgba(168, 222, 255, 0.11) 0%,
+    rgba(34, 211, 238, 0.07) 30%,
+    rgba(34, 211, 238, 0.03) 50%,
     rgba(34, 211, 238, 0) 72%
   );
   mix-blend-mode: screen;
@@ -2464,34 +2535,34 @@ textarea {
   will-change: transform, opacity;
 }
 .cursor-glow.active {
-  opacity: 1;
+  opacity: 0.8;
 }
 .cursor-dot {
   position: fixed;
   top: 0;
   left: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
   background: radial-gradient(
     circle at center,
-    rgba(220, 245, 255, 0.95) 0%,
-    rgba(120, 220, 250, 0.85) 30%,
-    rgba(34, 211, 238, 0.55) 55%,
+    rgba(220, 245, 255, 0.75) 0%,
+    rgba(120, 220, 250, 0.6) 30%,
+    rgba(34, 211, 238, 0.35) 55%,
     rgba(34, 211, 238, 0) 100%
   );
   mix-blend-mode: screen;
   filter: blur(0.4px);
   transform: translate(-50%, -50%) scale(1);
-  opacity: 0.95;
+  opacity: 0.75;
   box-shadow:
-    0 0 18px 2px rgba(34, 211, 238, 0.55),
-    0 0 48px 6px rgba(34, 211, 238, 0.18);
+    0 0 14px 1px rgba(34, 211, 238, 0.32),
+    0 0 36px 4px rgba(34, 211, 238, 0.12);
   transition:
-    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 .cursor-dot.fade {
