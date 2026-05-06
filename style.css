@@ -180,20 +180,22 @@ textarea {
   font-family: "Outfit", sans-serif;
 }
 .gradient-text {
-  background: linear-gradient(100deg, #ffffff 0%, #c7c8ff 25%, #5865f2 50%, #c7c8ff 75%, #ffffff 100%);
-  background-size: 220% 100%;
+  /* Use a palindromic 4-stop gradient repeated twice + 200% bg-size + 200%
+     position shift, so the animation loops seamlessly with no visible snap. */
+  background-image: linear-gradient(100deg, #ffffff 0%, #5865f2 25%, #ffffff 50%, #5865f2 75%, #ffffff 100%);
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: gradient-shimmer 5s linear infinite;
+  animation: gradient-shimmer 6s linear infinite;
 }
 @keyframes gradient-shimmer {
-  0% {
-    background-position: 110% 0;
+  from {
+    background-position: 0% 0;
   }
-  100% {
-    background-position: -110% 0;
+  to {
+    background-position: -200% 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -260,6 +262,36 @@ textarea {
   width: 100%;
   justify-content: center;
   padding: 12px 22px;
+}
+.btn-danger {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 10px 18px;
+  border-radius: 9999px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    border-color 0.18s,
+    color 0.18s;
+}
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+}
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-danger.btn-sm {
+  padding: 8px 14px;
+  font-size: 13px;
 }
 .text-link {
   color: var(--txt2);
@@ -1755,11 +1787,20 @@ textarea {
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 9999px;
-  background: rgba(88, 101, 242, 0.18);
-  color: #a8b0ff;
-  border: 1px solid rgba(88, 101, 242, 0.4);
+  background: rgba(34, 211, 238, 0.14);
+  color: #67e8f9;
+  border: 1px solid rgba(34, 211, 238, 0.45);
   white-space: nowrap;
   margin-bottom: 4px;
+}
+/* Invisible placeholder rendered on Free + Pro cards so the title row of all
+   three cards lines up at exactly the same Y. Same metrics as the pill. */
+.plan-recommended-spacer {
+  display: inline-block;
+  height: calc(11px * 1.5 + 4px * 2 + 2px);
+  margin-bottom: 4px;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 /* Page-head eyebrows are intentionally suppressed — page titles speak for themselves. */
@@ -2402,22 +2443,22 @@ textarea {
   position: fixed;
   top: 0;
   left: 0;
-  width: 480px;
-  height: 480px;
-  margin-left: -240px;
-  margin-top: -240px;
+  width: 320px;
+  height: 320px;
+  margin-left: -160px;
+  margin-top: -160px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9998;
   background: radial-gradient(
     circle at center,
-    rgba(168, 176, 255, 0.22) 0%,
-    rgba(88, 101, 242, 0.14) 25%,
-    rgba(88, 101, 242, 0.06) 45%,
-    rgba(88, 101, 242, 0) 70%
+    rgba(168, 222, 255, 0.18) 0%,
+    rgba(34, 211, 238, 0.11) 30%,
+    rgba(34, 211, 238, 0.05) 50%,
+    rgba(34, 211, 238, 0) 72%
   );
   mix-blend-mode: screen;
-  filter: blur(10px);
+  filter: blur(8px);
   opacity: 0;
   transition: opacity 0.35s ease-out;
   will-change: transform, opacity;
@@ -2429,28 +2470,28 @@ textarea {
   position: fixed;
   top: 0;
   left: 0;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 9999;
   background: radial-gradient(
     circle at center,
-    rgba(220, 224, 255, 0.95) 0%,
-    rgba(168, 176, 255, 0.85) 30%,
-    rgba(88, 101, 242, 0.55) 55%,
-    rgba(88, 101, 242, 0) 100%
+    rgba(220, 245, 255, 0.95) 0%,
+    rgba(120, 220, 250, 0.85) 30%,
+    rgba(34, 211, 238, 0.55) 55%,
+    rgba(34, 211, 238, 0) 100%
   );
   mix-blend-mode: screen;
-  filter: blur(0.5px);
+  filter: blur(0.4px);
   transform: translate(-50%, -50%) scale(1);
   opacity: 0.95;
   box-shadow:
-    0 0 24px 2px rgba(88, 101, 242, 0.55),
-    0 0 60px 8px rgba(88, 101, 242, 0.18);
+    0 0 18px 2px rgba(34, 211, 238, 0.55),
+    0 0 48px 6px rgba(34, 211, 238, 0.18);
   transition:
-    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 .cursor-dot.fade {
