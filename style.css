@@ -7,8 +7,8 @@
   --txt: #fff;
   --txt2: #a1a1aa;
   --muted: #71717a;
-  --primary: #5865f2;
-  --primary-h: #4752c4;
+  --primary: #22d3ee;
+  --primary-h: #06b6d4;
   --cyan: #22d3ee;
   --danger: #ef4444;
   --success: #10b981;
@@ -77,7 +77,7 @@ textarea {
   color: #fff;
 }
 ::selection {
-  background: rgba(88, 101, 242, 0.4);
+  background: rgba(34, 211, 238, 0.4);
   color: #fff;
 }
 ::-webkit-scrollbar {
@@ -182,7 +182,7 @@ textarea {
 .gradient-text {
   /* Use a palindromic 4-stop gradient repeated twice + 200% bg-size + 200%
      position shift, so the animation loops seamlessly with no visible snap. */
-  background-image: linear-gradient(100deg, #ffffff 0%, #5865f2 25%, #ffffff 50%, #5865f2 75%, #ffffff 100%);
+  background-image: linear-gradient(100deg, #ffffff 0%, #22d3ee 25%, #ffffff 50%, #22d3ee 75%, #ffffff 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -214,13 +214,16 @@ textarea {
 }
 .multiline-gradient .line {
   display: inline-block;
-  background-image: linear-gradient(100deg, #ffffff 0%, #5865f2 25%, #ffffff 50%, #5865f2 75%, #ffffff 100%);
+  background-image: linear-gradient(100deg, #ffffff 0%, #22d3ee 25%, #ffffff 50%, #22d3ee 75%, #ffffff 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: gradient-shimmer 6s linear infinite;
+  /* `--cycle` = total animation duration. With 2 lines, line 2's delay is
+     `--cycle / 2`, so line 1 finishes its sweep just as line 2 begins —
+     never both shimmering at the same time. */
+  animation: gradient-shimmer var(--cycle, 5s) linear infinite;
   animation-delay: var(--d, 0s);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -248,7 +251,7 @@ textarea {
 }
 .btn-primary:hover {
   background: var(--primary-h);
-  box-shadow: 0 0 24px rgba(88, 101, 242, 0.45);
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.45);
   transform: translateY(-1px);
 }
 .btn-primary:active {
@@ -373,7 +376,7 @@ textarea {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #5865f2, #22d3ee);
+  background: linear-gradient(135deg, #22d3ee, #22d3ee);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -395,7 +398,7 @@ textarea {
   height: 1100px;
   border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(88, 101, 242, 0.18) 0%, rgba(34, 211, 238, 0.05) 35%, transparent 65%);
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.18) 0%, rgba(34, 211, 238, 0.05) 35%, transparent 65%);
 }
 .hero-grid {
   display: grid;
@@ -469,7 +472,7 @@ textarea {
   width: 176px;
   height: 176px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #5865f2, #3a45c8);
+  background: linear-gradient(135deg, #22d3ee, #0891b2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -478,13 +481,13 @@ textarea {
   0%,
   100% {
     box-shadow:
-      0 0 0 0 rgba(88, 101, 242, 0.55),
-      0 0 60px rgba(88, 101, 242, 0.25);
+      0 0 0 0 rgba(34, 211, 238, 0.55),
+      0 0 60px rgba(34, 211, 238, 0.25);
   }
   50% {
     box-shadow:
-      0 0 0 18px rgba(88, 101, 242, 0),
-      0 0 80px rgba(88, 101, 242, 0.4);
+      0 0 0 18px rgba(34, 211, 238, 0),
+      0 0 80px rgba(34, 211, 238, 0.4);
   }
 }
 .shield-pulse {
@@ -625,8 +628,8 @@ textarea {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(88, 101, 242, 0.1);
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
   color: var(--primary);
   display: inline-flex;
   align-items: center;
@@ -825,7 +828,7 @@ textarea {
 }
 .feed-item.new {
   animation: slideInRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  background: rgba(88, 101, 242, 0.06);
+  background: rgba(34, 211, 238, 0.06);
 }
 
 /* ================= AUTH ================= */
@@ -894,8 +897,8 @@ textarea {
   padding-left: 44px;
 }
 .input:focus {
-  border-color: rgba(88, 101, 242, 0.5);
-  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.18);
+  border-color: rgba(34, 211, 238, 0.5);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
 }
 .auth-card .muted.center.small {
   margin-top: 24px;
@@ -963,7 +966,7 @@ textarea {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #5865f2, #3a45c8);
+  background: linear-gradient(135deg, #22d3ee, #0891b2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1050,9 +1053,9 @@ textarea {
   color: #fff;
 }
 .nav-item.active {
-  background: rgba(88, 101, 242, 0.1);
+  background: rgba(34, 211, 238, 0.1);
   color: #fff;
-  border-color: rgba(88, 101, 242, 0.3);
+  border-color: rgba(34, 211, 238, 0.3);
 }
 .sidebar-foot {
   padding: 16px;
@@ -1070,7 +1073,7 @@ textarea {
   display: block;
 }
 .upgrade-card:hover {
-  border-color: rgba(88, 101, 242, 0.4);
+  border-color: rgba(34, 211, 238, 0.4);
 }
 .upgrade-title {
   color: var(--cyan);
@@ -1096,8 +1099,8 @@ textarea {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(88, 101, 242, 0.2);
-  border: 1px solid rgba(88, 101, 242, 0.4);
+  background: rgba(34, 211, 238, 0.2);
+  border: 1px solid rgba(34, 211, 238, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1347,8 +1350,8 @@ textarea {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: rgba(88, 101, 242, 0.1);
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1439,7 +1442,7 @@ textarea {
 .range-modern {
   --pct: 50%;
   --track: #1c1c20;
-  --fill: linear-gradient(90deg, #5865f2 0%, #7c87f7 100%);
+  --fill: linear-gradient(90deg, #22d3ee 0%, #67e8f9 100%);
 }
 .range-modern::-webkit-slider-runnable-track {
   height: 6px;
@@ -1468,10 +1471,10 @@ textarea {
   height: 20px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid #5865f2;
+  border: 2px solid #22d3ee;
   box-shadow:
-    0 4px 12px rgba(88, 101, 242, 0.45),
-    0 0 0 4px rgba(88, 101, 242, 0.12);
+    0 4px 12px rgba(34, 211, 238, 0.45),
+    0 0 0 4px rgba(34, 211, 238, 0.12);
   margin-top: -8px;
   transition:
     transform 0.18s,
@@ -1481,18 +1484,18 @@ textarea {
 .range-modern:focus::-webkit-slider-thumb {
   transform: scale(1.12);
   box-shadow:
-    0 6px 18px rgba(88, 101, 242, 0.6),
-    0 0 0 6px rgba(88, 101, 242, 0.18);
+    0 6px 18px rgba(34, 211, 238, 0.6),
+    0 0 0 6px rgba(34, 211, 238, 0.18);
 }
 .range-modern::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid #5865f2;
+  border: 2px solid #22d3ee;
   box-shadow:
-    0 4px 12px rgba(88, 101, 242, 0.45),
-    0 0 0 4px rgba(88, 101, 242, 0.12);
+    0 4px 12px rgba(34, 211, 238, 0.45),
+    0 0 0 4px rgba(34, 211, 238, 0.12);
   transition:
     transform 0.18s,
     box-shadow 0.18s;
@@ -1501,8 +1504,8 @@ textarea {
 .range-modern:focus::-moz-range-thumb {
   transform: scale(1.12);
   box-shadow:
-    0 6px 18px rgba(88, 101, 242, 0.6),
-    0 0 0 6px rgba(88, 101, 242, 0.18);
+    0 6px 18px rgba(34, 211, 238, 0.6),
+    0 0 0 6px rgba(34, 211, 238, 0.18);
 }
 .range-control {
   display: flex;
@@ -1831,10 +1834,10 @@ textarea {
   margin-top: 4px;
 }
 .plan-card.is-recommended {
-  border-color: rgba(88, 101, 242, 0.5);
+  border-color: rgba(34, 211, 238, 0.5);
   box-shadow:
-    0 0 0 1px rgba(88, 101, 242, 0.18),
-    0 12px 32px rgba(88, 101, 242, 0.1);
+    0 0 0 1px rgba(34, 211, 238, 0.18),
+    0 12px 32px rgba(34, 211, 238, 0.1);
 }
 .plan-recommended-inline {
   display: inline-block;
@@ -1932,7 +1935,7 @@ textarea {
   position: relative;
   border-radius: 22px;
   padding: 2px;
-  background: conic-gradient(from var(--angle, 0deg), #5865f2, #22d3ee, #5865f2);
+  background: conic-gradient(from var(--angle, 0deg), #22d3ee, #22d3ee, #22d3ee);
   animation: spin-border 4s linear infinite;
 }
 @property --angle {
@@ -1956,12 +1959,12 @@ textarea {
 .badge-pro {
   padding: 4px 10px;
   border-radius: 9999px;
-  background: rgba(88, 101, 242, 0.15);
-  border: 1px solid rgba(88, 101, 242, 0.4);
+  background: rgba(34, 211, 238, 0.15);
+  border: 1px solid rgba(34, 211, 238, 0.4);
   font-size: 10px;
   letter-spacing: 0.18em;
   font-family: "JetBrains Mono";
-  color: #a8b0ff;
+  color: #67e8f9;
 }
 
 /* Settings */
@@ -2084,7 +2087,7 @@ textarea {
   transform: translateX(4px);
 }
 .lb-row.top-3 {
-  border-color: rgba(88, 101, 242, 0.3);
+  border-color: rgba(34, 211, 238, 0.3);
 }
 .lb-rank {
   font-family: "Outfit", sans-serif;
@@ -2110,7 +2113,7 @@ textarea {
   height: 32px;
   border-radius: 8px;
   object-fit: cover;
-  background: linear-gradient(135deg, #5865f2, #3a45c8);
+  background: linear-gradient(135deg, #22d3ee, #0891b2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2168,9 +2171,9 @@ textarea {
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 9999px;
-  background: rgba(88, 101, 242, 0.15);
-  color: #a8b0ff;
-  border: 1px solid rgba(88, 101, 242, 0.3);
+  background: rgba(34, 211, 238, 0.15);
+  color: #67e8f9;
+  border: 1px solid rgba(34, 211, 238, 0.3);
   font-weight: 600;
 }
 .changelog-version.latest {
@@ -2504,12 +2507,10 @@ textarea {
   }
 }
 
-/* ================= MOUSE TRAIL & FLASHLIGHT =================
-   - `.cursor-glow`  : a single big soft halo that lives at the cursor's
-                       position. Acts like a flashlight illuminating the
-                       page. Updated on every mousemove via JS.
-   - `.cursor-dot`   : individual particles spawned along the cursor path
-                       that fade out, building up a subtle trail. */
+/* ================= FLASHLIGHT CURSOR GLOW =================
+   A single soft halo that lives at the cursor's position, acting like a
+   flashlight illuminating the page. Updated via JS rAF loop. The mouse
+   particle trail was intentionally removed in v2.6.2. */
 .cursor-glow {
   position: fixed;
   top: 0;
@@ -2523,9 +2524,9 @@ textarea {
   z-index: 9998;
   background: radial-gradient(
     circle at center,
-    rgba(168, 222, 255, 0.11) 0%,
-    rgba(34, 211, 238, 0.07) 30%,
-    rgba(34, 211, 238, 0.03) 50%,
+    rgba(168, 222, 255, 0.18) 0%,
+    rgba(34, 211, 238, 0.11) 30%,
+    rgba(34, 211, 238, 0.05) 50%,
     rgba(34, 211, 238, 0) 72%
   );
   mix-blend-mode: screen;
@@ -2535,42 +2536,9 @@ textarea {
   will-change: transform, opacity;
 }
 .cursor-glow.active {
-  opacity: 0.8;
-}
-.cursor-dot {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  background: radial-gradient(
-    circle at center,
-    rgba(220, 245, 255, 0.75) 0%,
-    rgba(120, 220, 250, 0.6) 30%,
-    rgba(34, 211, 238, 0.35) 55%,
-    rgba(34, 211, 238, 0) 100%
-  );
-  mix-blend-mode: screen;
-  filter: blur(0.4px);
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 0.75;
-  box-shadow:
-    0 0 14px 1px rgba(34, 211, 238, 0.32),
-    0 0 36px 4px rgba(34, 211, 238, 0.12);
-  transition:
-    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, opacity;
-}
-.cursor-dot.fade {
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.18);
+  opacity: 1;
 }
 @media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
-  .cursor-dot,
   .cursor-glow {
     display: none !important;
   }
@@ -2637,8 +2605,8 @@ textarea {
   border-color: var(--border-h);
 }
 .card-input:focus-within {
-  border-color: rgba(88, 101, 242, 0.6);
-  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.18);
+  border-color: rgba(34, 211, 238, 0.6);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
   background: #14141a;
 }
 .card-row-2 {
@@ -2655,4 +2623,123 @@ textarea {
 }
 .card-form + .btn-primary {
   margin-top: 14px;
+}
+
+/* ================= TARGET-USER COMBOBOX (Commands page) =================
+   Dropdown that lists guild members so the user can mention them with one
+   click instead of pasting an ID. Includes search-as-you-type filtering. */
+.combobox {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.combobox .input {
+  flex: 1;
+  padding-right: 36px;
+}
+.combobox-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.combobox-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+.combobox-menu[hidden] {
+  display: none !important;
+}
+.combobox-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #15151a;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  padding: 6px;
+}
+.combobox-menu::-webkit-scrollbar {
+  width: 6px;
+}
+.combobox-menu::-webkit-scrollbar-thumb {
+  background: #2a2a30;
+  border-radius: 3px;
+}
+.combobox-empty {
+  padding: 14px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.combobox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: #fff;
+  transition: background 0.12s;
+}
+.combobox-row:hover,
+.combobox-row:focus-visible {
+  background: rgba(34, 211, 238, 0.12);
+}
+.combobox-av {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #25252b;
+  color: #c7c8d1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+}
+.combobox-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.combobox-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.combobox-display {
+  font-size: 14px;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.combobox-handle {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--muted);
 }
