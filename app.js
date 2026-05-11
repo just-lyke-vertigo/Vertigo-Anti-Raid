@@ -6,7 +6,7 @@ const API_BASE = "https://vertigolyfe.pythonanywhere.com";
 const API = API_BASE + "/api";
 
 const CURRENCY_SYMBOL = "£";
-const VERSION = "2.6.1";
+const VERSION = "2.7.0";
 
 /* ================= CHANGELOG =================
    Add new entries at the TOP (newest first).
@@ -17,6 +17,39 @@ const VERSION = "2.6.1";
      - fixed   (cyan)
 */
 const CHANGELOG = [
+  {
+    version: "2.7.0",
+    date: "2026-05-06",
+    title: "New cyan theme, member dropdown, snapshot polish",
+    changes: [
+      [
+        "changed",
+        "Entire site recoloured from indigo to cyan (the Plus card stroke shade) — green accents preserved",
+      ],
+      ["removed", "Mouse particle trail — only the soft cyan flashlight glow remains"],
+      [
+        "added",
+        "Commands page: target-user combobox with searchable dropdown of guild members (one click to mention)",
+      ],
+      [
+        "added",
+        "20-character cap on snapshot name + description (with top-right warning on first hit)",
+      ],
+      ["added", "20-character cap on commands reason field"],
+      [
+        "added",
+        "Backend + frontend reject creating a snapshot with a duplicate name (warning toast)",
+      ],
+      [
+        "fixed",
+        "Creating a snapshot no longer flickers / re-renders the whole page — new entry is appended in place",
+      ],
+      [
+        "fixed",
+        "Per-line gradient now sweeps line 1, pauses, then line 2 (sequential instead of diagonal)",
+      ],
+    ],
+  },
   {
     version: "2.6.1",
     date: "2026-05-06",
@@ -286,7 +319,7 @@ function setupReveals(root = document) {
   $$(".reveal", root).forEach((el) => revealObserver.observe(el));
 }
 
-/* -------- Mouse trail + flashlight glow -------- */
+/* -------- Flashlight cursor glow (mouse trail removed) -------- */
 function initCursorTrail() {
   // Bail on touch / coarse pointers / reduced motion (CSS handles the rest)
   if (matchMedia("(hover: none), (pointer: coarse), (prefers-reduced-motion: reduce)").matches) {
@@ -302,7 +335,7 @@ function initCursorTrail() {
   let targetY = glowY;
   let glowVisible = false;
 
-  // Smoothly follow the cursor using rAF (eased trail for the flashlight).
+  // Smoothly follow the cursor using rAF (eased follow for the flashlight).
   (function animateGlow() {
     glowX += (targetX - glowX) * 0.18;
     glowY += (targetY - glowY) * 0.18;
@@ -321,56 +354,13 @@ function initCursorTrail() {
     glowVisible = false;
   };
 
-  // Trail dots — spawn along the path on every mousemove. When the gap
-  // between two events is large (slow mousemove frequency on some
-  // systems), we INTERPOLATE dots between the last point and the current
-  // point so the ribbon stays continuous instead of leaving gaps.
-  const STEP = 8; // distance between trail dots, in px
-  const LIFE_MS = 900;
-  let lastX = null;
-  let lastY = null;
-
-  const spawnDot = (x, y) => {
-    const dot = document.createElement("div");
-    dot.className = "cursor-dot";
-    dot.style.left = `${x}px`;
-    dot.style.top = `${y}px`;
-    document.body.appendChild(dot);
-    requestAnimationFrame(() => dot.classList.add("fade"));
-    setTimeout(() => dot.remove(), LIFE_MS);
+  const onPointer = (e) => {
+    targetX = e.clientX;
+    targetY = e.clientY;
+    showGlow();
   };
-
-  document.addEventListener(
-    "mousemove",
-    (e) => {
-      targetX = e.clientX;
-      targetY = e.clientY;
-      showGlow();
-      const x = e.clientX;
-      const y = e.clientY;
-      if (lastX === null) {
-        spawnDot(x, y);
-        lastX = x;
-        lastY = y;
-        return;
-      }
-      // Walk along the segment from (lastX, lastY) → (x, y) in STEP-px steps
-      const dx = x - lastX;
-      const dy = y - lastY;
-      const dist = Math.hypot(dx, dy);
-      if (dist < STEP) return; // too small to bother
-      const steps = Math.min(40, Math.floor(dist / STEP));
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        spawnDot(lastX + dx * t, lastY + dy * t);
-      }
-      lastX = x;
-      lastY = y;
-    },
-    { passive: true }
-  );
-
-  // Hide the flashlight when cursor leaves the window
+  document.addEventListener("pointermove", onPointer, { passive: true, capture: true });
+  document.addEventListener("mousemove", onPointer, { passive: true, capture: true });
   document.addEventListener("mouseleave", hideGlow);
   document.addEventListener("mouseenter", showGlow);
 }
@@ -1329,7 +1319,7 @@ async function renderOverview(root) {
           "div",
           {
             style:
-              "font-size:48px;margin-bottom:12px;animation:shieldPulse 2.6s ease-in-out infinite;width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#5865F2,#3a45c8);display:flex;align-items:center;justify-content:center;margin:0 auto 24px",
+              "font-size:48px;margin-bottom:12px;animation:shieldPulse 2.6s ease-in-out infinite;width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#0891b2);display:flex;align-items:center;justify-content:center;margin:0 auto 24px",
           },
           h("span", {
             html: '<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="white" stroke-width="1.5"><path d="M12 2L4 6v6c0 5 3.5 9.7 8 10 4.5-.3 8-5 8-10V6l-8-4z"/></svg>',
@@ -1411,7 +1401,7 @@ async function renderOverview(root) {
   root.appendChild(header);
 
   const statCfg = [
-    ["Nukes blocked", stats?.raids_blocked ?? 0, "All time", "#5865F2", ICON.shield, "raids"],
+    ["Nukes blocked", stats?.raids_blocked ?? 0, "All time", "#22d3ee", ICON.shield, "raids"],
     ["Backups", stats?.backups_count ?? 0, "Restorable snapshots", "#22D3EE", ICON.save, "backups"],
     ["Commands", stats?.commands_run ?? 0, "Executed total", "#F59E0B", ICON.term, "commands"],
     [
@@ -1652,10 +1642,10 @@ function drawChart(data) {
     path + ` L${points[points.length - 1][0]},${hgt - padB} L${padL},${hgt - padB} Z`;
   const gridY = [0, 0.25, 0.5, 0.75, 1].map((v) => padT + v * (hgt - padT - padB));
   wrap.innerHTML = `<svg viewBox="0 0 ${w} ${hgt}" width="100%" height="${hgt}" preserveAspectRatio="none">
-    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5865F2" stop-opacity=".5"/><stop offset="100%" stop-color="#5865F2" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#22d3ee" stop-opacity=".5"/><stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/></linearGradient></defs>
     ${gridY.map((y) => `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#27272A" stroke-width="1"/>`).join("")}
     <path d="${areaPath}" fill="url(#ga)"/>
-    <path d="${path}" fill="none" stroke="#5865F2" stroke-width="2"/>
+    <path d="${path}" fill="none" stroke="#22d3ee" stroke-width="2"/>
     ${data.map((d, i) => `<text x="${padL + i * stepX}" y="${hgt - padB + 16}" fill="#71717A" font-size="11" text-anchor="middle" font-family="JetBrains Mono">${d.date.slice(5)}</text>`).join("")}
   </svg>`;
 }
@@ -1830,21 +1820,151 @@ async function renderBackups(root) {
       )
     )
   );
-  const nameI = h("input", { class: "input", placeholder: "Snapshot name" });
-  const descI = h("input", { class: "input", placeholder: "Description (optional)" });
+  const MAX_LEN = 20;
+  // Limit input + flash a top-right warning the first time the user hits
+  // the cap. We store a flag on the input so we don't spam toasts.
+  const limitInput = (el, label) => {
+    el.maxLength = MAX_LEN;
+    el.addEventListener("input", () => {
+      if (el.value.length >= MAX_LEN && !el._warned) {
+        el._warned = true;
+        toast(`${label} is capped at ${MAX_LEN} characters`, "info");
+      }
+      if (el.value.length < MAX_LEN) el._warned = false;
+    });
+  };
+  const nameI = h("input", {
+    class: "input",
+    placeholder: `Snapshot name (max ${MAX_LEN})`,
+  });
+  const descI = h("input", {
+    class: "input",
+    placeholder: `Description (max ${MAX_LEN}, optional)`,
+  });
+  limitInput(nameI, "Snapshot name");
+  limitInput(descI, "Description");
   const makeBtn = h("button", { class: "btn-primary" }, "Create snapshot");
+  // Track the in-memory snapshot list so we can do optimistic updates without
+  // re-rendering the whole page (which causes the visible "freeze + refresh").
+  let currentList = list.slice();
+  const tableHost = h("div", { class: "table-card reveal" });
+
+  const renderTable = () => {
+    tableHost.innerHTML = "";
+    tableHost.appendChild(
+      h(
+        "div",
+        { class: "table-head" },
+        h("h3", {}, "All snapshots"),
+        h("span", { class: "count" }, `${currentList.length} total`)
+      )
+    );
+    if (!currentList.length) {
+      tableHost.appendChild(h("div", { class: "empty" }, "No backups yet."));
+      return;
+    }
+    const tbl = h("table", { class: "ttable" });
+    tbl.appendChild(
+      h(
+        "thead",
+        {},
+        h(
+          "tr",
+          {},
+          h("th", {}, "Name"),
+          h("th", {}, "Description"),
+          h("th", {}, "Created"),
+          h("th", { style: "text-align:right" }, "Actions")
+        )
+      )
+    );
+    const tbody = h("tbody");
+    currentList.forEach((b) => {
+      tbody.appendChild(
+        h(
+          "tr",
+          {},
+          h("td", {}, b.name),
+          h("td", { class: "muted" }, b.description || "—"),
+          h("td", { class: "muted small" }, new Date(b.created_at).toLocaleString()),
+          h(
+            "td",
+            { style: "text-align:right" },
+            h(
+              "div",
+              { style: "display:inline-flex;gap:8px" },
+              h(
+                "button",
+                {
+                  class: "btn-ghost btn-sm",
+                  onclick: async (e) => {
+                    e.target.disabled = true;
+                    try {
+                      await api(`/servers/${srv.id}/backups/${b.id}/restore`, { method: "POST" });
+                      toast("Restored", "success");
+                    } catch (err) {
+                      toast(err.message, "error");
+                      e.target.disabled = false;
+                    }
+                  },
+                },
+                "Restore"
+              ),
+              h(
+                "button",
+                {
+                  class: "btn-danger btn-sm",
+                  onclick: async (e) => {
+                    if (!confirm(`Delete snapshot "${b.name}"?`)) return;
+                    e.target.disabled = true;
+                    try {
+                      await api(`/servers/${srv.id}/backups/${b.id}`, { method: "DELETE" });
+                      currentList = currentList.filter((x) => x.id !== b.id);
+                      renderTable();
+                    } catch (err) {
+                      toast(err.message, "error");
+                      e.target.disabled = false;
+                    }
+                  },
+                },
+                "Delete"
+              )
+            )
+          )
+        )
+      );
+    });
+    tbl.appendChild(tbody);
+    tableHost.appendChild(tbl);
+  };
+
   makeBtn.addEventListener("click", async () => {
-    if (!nameI.value.trim()) return toast("Name required", "error");
+    const name = nameI.value.trim();
+    const desc = descI.value.trim();
+    if (!name) return toast("Name required", "error");
+    if (name.length > MAX_LEN) return toast(`Name must be ≤ ${MAX_LEN} chars`, "error");
+    if (desc.length > MAX_LEN) return toast(`Description must be ≤ ${MAX_LEN} chars`, "error");
+    // Block duplicate names client-side for instant feedback. Backend also
+    // enforces this so a race between two tabs can't slip through.
+    if (currentList.some((b) => b.name.toLowerCase() === name.toLowerCase())) {
+      return toast("A snapshot with that name already exists", "error");
+    }
     makeBtn.disabled = true;
     try {
-      await api(`/servers/${srv.id}/backups`, {
+      const created = await api(`/servers/${srv.id}/backups`, {
         method: "POST",
-        body: { name: nameI.value, server_id: srv.id, description: descI.value || null },
+        body: { name, server_id: srv.id, description: desc || null },
       });
+      // Optimistically prepend the new snapshot — no full page re-render so
+      // the screen doesn't visibly flicker / "refresh".
+      currentList = [created, ...currentList];
+      renderTable();
+      nameI.value = "";
+      descI.value = "";
       toast("Saved", "success");
-      router();
     } catch (err) {
       toast(err.message, "error");
+    } finally {
       makeBtn.disabled = false;
     }
   });
@@ -1860,99 +1980,8 @@ async function renderBackups(root) {
       h("div", { class: "create-row" }, nameI, descI, makeBtn)
     )
   );
-  const card = h("div", { class: "table-card reveal" });
-  card.appendChild(
-    h(
-      "div",
-      { class: "table-head" },
-      h("h3", {}, "All snapshots"),
-      h("span", { class: "count" }, `${list.length} total`)
-    )
-  );
-  if (!list.length) card.appendChild(h("div", { class: "empty" }, "No backups yet."));
-  else {
-    const tbl = h("table", { class: "ttable" });
-    tbl.appendChild(
-      h(
-        "thead",
-        {},
-        h(
-          "tr",
-          {},
-          h("th", {}, "Name"),
-          h("th", {}, "Channels"),
-          h("th", {}, "Roles"),
-          h("th", {}, "Created"),
-          h("th", { style: "text-align:right" }, "Actions")
-        )
-      )
-    );
-    const tbody = h("tbody", {});
-    list.forEach((b) =>
-      tbody.appendChild(
-        h(
-          "tr",
-          {},
-          h(
-            "td",
-            {},
-            h("div", { style: "font-weight:500" }, b.name),
-            b.description
-              ? h("div", { style: "font-size:11px;color:var(--muted)" }, b.description)
-              : ""
-          ),
-          h("td", { class: "muted" }, String(b.channels_count)),
-          h("td", { class: "muted" }, String(b.roles_count)),
-          h(
-            "td",
-            { class: "muted", style: "font-size:12px" },
-            new Date(b.created_at).toLocaleString()
-          ),
-          h(
-            "td",
-            { style: "text-align:right" },
-            h(
-              "div",
-              { class: "row-actions" },
-              h(
-                "button",
-                {
-                  class: "action-btn cyan",
-                  onclick: async () => {
-                    try {
-                      await api(`/servers/${srv.id}/backups/${b.id}/restore`, { method: "POST" });
-                      toast("Restore queued", "success");
-                    } catch (e) {
-                      toast(e.message, "error");
-                    }
-                  },
-                },
-                h("span", { html: ICON.rotate })
-              ),
-              h(
-                "button",
-                {
-                  class: "action-btn red",
-                  onclick: async () => {
-                    try {
-                      await api(`/servers/${srv.id}/backups/${b.id}`, { method: "DELETE" });
-                      router();
-                    } catch (e) {
-                      toast(e.message, "error");
-                    }
-                  },
-                },
-                h("span", { html: ICON.trash })
-              )
-            )
-          )
-        )
-      )
-    );
-    tbl.appendChild(tbody);
-    card.appendChild(tbl);
-  }
-  root.appendChild(card);
+  renderTable();
+  root.appendChild(tableHost);
 }
 
 /* -------- PAGE: NOTIFICATIONS -------- */
@@ -2086,6 +2115,8 @@ async function renderCommands(root) {
     ["raid_mode_off", "Raid OFF", "Normal", false],
   ];
   let selected = COMMANDS[0];
+  // Fetch guild members up-front so the target dropdown is instant.
+  const members = await api(`/servers/${srv.id}/members`).catch(() => []);
   root.appendChild(
     h(
       "div",
@@ -2111,9 +2142,129 @@ async function renderCommands(root) {
   const runnerCard = h("div", { class: "section-card reveal" });
   const cmdGrid = h("div", { class: "cmd-grid" });
   const descLine = h("p", { class: "cmd-desc" });
-  const targetI = h("input", { class: "input", placeholder: "Target user (ID or @mention)" });
-  const reasonI = h("input", { class: "input", placeholder: "Reason (optional)" });
-  const targetWrap = h("div", {}, targetI);
+  // ---- Target user combobox: searchable + dropdown of guild members ----
+  const targetI = h("input", {
+    class: "input",
+    placeholder: "Target user (search or pick from list)",
+    autocomplete: "off",
+  });
+  const targetMenu = h("div", { class: "combobox-menu", role: "listbox", hidden: true });
+  const targetWrap = h(
+    "div",
+    { class: "combobox" },
+    targetI,
+    h(
+      "button",
+      {
+        class: "combobox-toggle",
+        type: "button",
+        "aria-label": "Show member list",
+        onclick: () => {
+          targetMenu.hidden = !targetMenu.hidden;
+          if (!targetMenu.hidden) renderMenu(targetI.value);
+        },
+      },
+      "▾"
+    ),
+    targetMenu
+  );
+  let selectedUser = null; // populated when user picks from dropdown
+  const renderMenu = (q) => {
+    targetMenu.innerHTML = "";
+    const query = (q || "").toLowerCase().trim();
+    const list = !members.length
+      ? []
+      : members
+          .filter((m) => {
+            if (!query) return true;
+            return (
+              m.username?.toLowerCase().includes(query) ||
+              m.display_name?.toLowerCase().includes(query) ||
+              m.id === query
+            );
+          })
+          .slice(0, 50);
+    if (!members.length) {
+      targetMenu.appendChild(
+        h(
+          "div",
+          { class: "combobox-empty" },
+          srv.bot_joined
+            ? "No members loaded — try refreshing"
+            : "Invite the bot to your server to load members"
+        )
+      );
+      return;
+    }
+    if (!list.length) {
+      targetMenu.appendChild(h("div", { class: "combobox-empty" }, "No matches"));
+      return;
+    }
+    list.forEach((m) => {
+      const row = h(
+        "button",
+        {
+          class: "combobox-row",
+          type: "button",
+          role: "option",
+          onclick: () => {
+            selectedUser = m;
+            // Use real Discord mention syntax — bot resolves <@id> on the
+            // backend side.
+            targetI.value = `<@${m.id}>`;
+            targetMenu.hidden = true;
+          },
+        },
+        h(
+          "span",
+          { class: "combobox-av" },
+          m.avatar
+            ? h("img", {
+                src: `https://cdn.discordapp.com/avatars/${m.id}/${m.avatar}.png?size=32`,
+                alt: "",
+              })
+            : (m.display_name || "?").slice(0, 1).toUpperCase()
+        ),
+        h(
+          "span",
+          { class: "combobox-name" },
+          h("span", { class: "combobox-display" }, m.display_name || m.username),
+          h("span", { class: "combobox-handle" }, `@${m.username}`)
+        )
+      );
+      targetMenu.appendChild(row);
+    });
+  };
+  targetI.addEventListener("input", () => {
+    selectedUser = null;
+    targetMenu.hidden = false;
+    renderMenu(targetI.value);
+  });
+  targetI.addEventListener("focus", () => {
+    targetMenu.hidden = false;
+    renderMenu(targetI.value);
+  });
+  document.addEventListener("click", (e) => {
+    if (!targetWrap.contains(e.target)) targetMenu.hidden = true;
+  });
+
+  const reasonI = h("input", {
+    class: "input",
+    placeholder: "Reason (max 20, optional)",
+  });
+  // 20-char cap on the reason field. Same warn-once-on-cap behaviour as the
+  // Backups page, kept in sync.
+  const limitInput = (el, label) => {
+    el.maxLength = 20;
+    el.addEventListener("input", () => {
+      if (el.value.length >= 20 && !el._warned) {
+        el._warned = true;
+        toast(`${label} is capped at 20 characters`, "info");
+      }
+      if (el.value.length < 20) el._warned = false;
+    });
+  };
+  limitInput(reasonI, "Reason");
   const runBtn = h("button", { class: "btn-primary" }, h("span", { html: ICON.send }), " Execute");
   const drawButtons = () => {
     cmdGrid.innerHTML = "";
@@ -2492,7 +2643,7 @@ async function renderPricing() {
       eyebrow: "plus",
       recommended: true,
       description: "More snapshots, more control, personal alerts.",
-      checkColor: "#a8b0ff",
+      checkColor: "#67e8f9",
       features: [
         "Everything in Free",
         "25 backups per server",
